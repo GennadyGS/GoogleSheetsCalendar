@@ -5,6 +5,7 @@ open Microsoft.Extensions.Configuration
 open Google.Apis.Auth.OAuth2
 open Google.Apis.Services
 open Google.Apis.Sheets.v4
+open Google.Apis.Sheets.v4.Data
 
 module NullCoalesce =
     let coalesce (b: 'a Lazy) (a: 'a) =
@@ -44,3 +45,20 @@ let initializer =
     new BaseClientService.Initializer(HttpClientInitializer = credential)
 
 let sheetsService = new SheetsService(initializer)
+
+let spreadsheetId = configuration.SpreadsheetId
+let updateData =
+    [|
+        ValueRange(
+            Range = "Sheet1",
+            Values = [|[| 2; 3 |]; [| 4; 5 |];|]
+        )
+    |]
+
+let valueUpdateRequestBody = new BatchUpdateValuesRequest(
+    ValueInputOption = "USER_ENTERED",
+    Data = updateData
+)
+
+sheetsService.Spreadsheets.Values.BatchUpdate(valueUpdateRequestBody, spreadsheetId).Execute()
+|> ignore
