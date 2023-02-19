@@ -1,5 +1,6 @@
 ﻿open System
 open System.IO
+open System.Collections.Generic
 open System.Reflection
 open Microsoft.Extensions.Configuration
 open Google.Apis.Auth.OAuth2
@@ -9,10 +10,13 @@ open Google.Apis.Sheets.v4.Data
 
 module NullCoalesce =
     let coalesce (b: 'a Lazy) (a: 'a) =
-        if obj.ReferenceEquals(a, null) then b.Value else a
+        if obj.ReferenceEquals(a, null) then
+            b.Value
+        else
+            a
 
 [<CLIMutable>]
-type Configuration = { SpreadsheetId: string }
+type Configuration = { SpreadsheetId: string; Year: int }
 
 [<Literal>]
 let credentialsFileName = "credentials.json"
@@ -48,23 +52,69 @@ let createSheetsService rootDirectoryPath =
 
     new SheetsService(initializer)
 
+type Week =
+    {
+        StartDate: DateOnly
+        EndDate: DateOnly
+        DaysActive: bool array
+    }
+
+type Month = Month of Week list
+
+type Calendar = Calendar of Month list
+
+let calculateCalendar year =
+    let daysPerWeek = Enum.GetValues<DayOfWeek>().Length
+    let calculateMonth month =
+        let dayCount = DateTime.DaysInMonth(year, month)
+        let startDayOfWeek = DateOnly(year, month, 1).DayOfWeek |> int
+        [ 1..dayCount ]
+        |> List.groupBy (fun day -> (day - startDayOfWeek - 1 + daysPerWeek) / daysPerWeek)
+        |> List.map snd
+        |> List.map (fun days ->
+            {
+                StartDate = DateOnly(year, month, List.min days)
+                EndDate = DateOnly(year, month, List.max days)
+                DaysActive = [||]
+            })
+        |> Month
+
+    let monthCount = DateOnly(year + 1, 1, 1).AddDays(-1).Month
+    [ 1..monthCount ]
+    |> List.map calculateMonth
+    |> Calendar
+
+let renderCalendar (sheetsService: SheetsService) configuration (Calendar months) =
+    let spreadsheetId = configuration.SpreadsheetId
+
+    let values =
+        months
+        |> List.collect (fun (Month weeks) -> weeks)
+        |> List.map (fun week -> [ week.StartDate; week.EndDate ])
+        |> List.map (fun list -> list |> List.toArray |> Array.map box :> IList<obj>)
+        |> List.toArray
+
+    let updateData =
+        [|
+            ValueRange(Range = "A2:B", Values = values)
+        |]
+
+    let valueUpdateRequestBody =
+        new BatchUpdateValuesRequest(ValueInputOption = "USER_ENTERED", Data = updateData)
+
+    sheetsService
+        .Spreadsheets
+        .Values
+        .BatchUpdate(valueUpdateRequestBody, spreadsheetId)
+        .Execute()
+    |> ignore
+
 let rootDirectoryPath = getRootDirectoryPath ()
 
 let configuration = createConfiguration rootDirectoryPath
 
 let sheetsService = createSheetsService rootDirectoryPath
 
-let spreadsheetId = configuration.SpreadsheetId
+let calendar = calculateCalendar configuration.Year
 
-let updateData =
-    [| ValueRange(Range = "Sheet1", Values = [| [| 2; 3 |]; [| 4; 5 |] |]) |]
-
-let valueUpdateRequestBody =
-    new BatchUpdateValuesRequest(ValueInputOption = "USER_ENTERED", Data = updateData)
-
-sheetsService
-    .Spreadsheets
-    .Values
-    .BatchUpdate(valueUpdateRequestBody, spreadsheetId)
-    .Execute()
-|> ignore
+renderCalendar sheetsService configuration calendar
