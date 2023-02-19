@@ -17,13 +17,14 @@ type Configuration = { SpreadsheetId: string }
 [<Literal>]
 let credentialsFileName = "credentials.json"
 
-let executableFilePath = Assembly.GetExecutingAssembly().Location
-let executableDirectoryPath = Path.GetDirectoryName(executableFilePath)
+let getRootDirectoryPath () =
+    let executableFilePath = Assembly.GetExecutingAssembly().Location
+    Path.GetDirectoryName(executableFilePath)
 
-let configuration =
+let createConfiguration rootDirectoryPath =
     let nativeConfiguration =
         (new ConfigurationBuilder())
-            .SetBasePath(executableDirectoryPath)
+            .SetBasePath(rootDirectoryPath)
             .AddJsonFile("appsettings.json", true, true)
             .AddUserSecrets<Configuration>()
             .Build()
@@ -31,34 +32,39 @@ let configuration =
     nativeConfiguration.Get<Configuration>()
     |> NullCoalesce.coalesce (lazy raise (InvalidOperationException("Configuration is missing")))
 
-let credentialFileName = Path.Combine(executableDirectoryPath, credentialsFileName)
+let createSheetsService rootDirectoryPath =
+    let credentialFileName = Path.Combine(rootDirectoryPath, credentialsFileName)
 
-if not (File.Exists(credentialFileName)) then
-    raise (InvalidOperationException($"File {credentialsFileName} is missing"))
+    if not (File.Exists(credentialFileName)) then
+        raise (InvalidOperationException($"File {credentialsFileName} is missing"))
 
-let credential =
-    GoogleCredential
-        .FromFile(credentialFileName)
-        .CreateScoped([| SheetsService.Scope.Spreadsheets |])
+    let credential =
+        GoogleCredential
+            .FromFile(credentialFileName)
+            .CreateScoped([| SheetsService.Scope.Spreadsheets |])
 
-let initializer =
-    new BaseClientService.Initializer(HttpClientInitializer = credential)
+    let initializer =
+        new BaseClientService.Initializer(HttpClientInitializer = credential)
 
-let sheetsService = new SheetsService(initializer)
+    new SheetsService(initializer)
+
+let rootDirectoryPath = getRootDirectoryPath ()
+
+let configuration = createConfiguration rootDirectoryPath
+
+let sheetsService = createSheetsService rootDirectoryPath
 
 let spreadsheetId = configuration.SpreadsheetId
+
 let updateData =
-    [|
-        ValueRange(
-            Range = "Sheet1",
-            Values = [|[| 2; 3 |]; [| 4; 5 |];|]
-        )
-    |]
+    [| ValueRange(Range = "Sheet1", Values = [| [| 2; 3 |]; [| 4; 5 |] |]) |]
 
-let valueUpdateRequestBody = new BatchUpdateValuesRequest(
-    ValueInputOption = "USER_ENTERED",
-    Data = updateData
-)
+let valueUpdateRequestBody =
+    new BatchUpdateValuesRequest(ValueInputOption = "USER_ENTERED", Data = updateData)
 
-sheetsService.Spreadsheets.Values.BatchUpdate(valueUpdateRequestBody, spreadsheetId).Execute()
+sheetsService
+    .Spreadsheets
+    .Values
+    .BatchUpdate(valueUpdateRequestBody, spreadsheetId)
+    .Execute()
 |> ignore
