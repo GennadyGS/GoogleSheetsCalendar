@@ -15,6 +15,9 @@ module NullCoalesce =
         else
             a
 
+module Int =
+    let between (min, max) x = x >= min && x <= max
+
 [<CLIMutable>]
 type Configuration = { SpreadsheetId: string; Year: int }
 
@@ -78,8 +81,8 @@ let calculateCalendar year =
                 EndDate = startDate.AddDays(startDay + daysPerWeek - 1)
                 DaysActive =
                     Array.init daysPerWeek (fun dayOfWeek ->
-                        startDay + dayOfWeek > 0
-                        && startDay + dayOfWeek < dayCount)
+                        startDay + dayOfWeek
+                        |> Int.between (0, dayCount - 1))
             })
         |> Month
 
