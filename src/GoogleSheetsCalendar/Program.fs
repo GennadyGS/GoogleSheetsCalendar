@@ -67,15 +67,19 @@ let calculateCalendar year =
     let daysPerWeek = Enum.GetValues<DayOfWeek>().Length
     let calculateMonth month =
         let dayCount = DateTime.DaysInMonth(year, month)
-        let startDayOfWeek = DateOnly(year, month, 1).DayOfWeek |> int
+        let startDate = DateOnly(year, month, 1)
+        let startDayOfWeek = startDate.DayOfWeek |> int
         [ 1..dayCount ]
-        |> List.groupBy (fun day -> (day - startDayOfWeek - 1 + daysPerWeek) / daysPerWeek)
-        |> List.map snd
-        |> List.map (fun days ->
+        |> List.groupBy (fun day -> (day - 1 + startDayOfWeek) / daysPerWeek)
+        |> List.map (fun (weekNumber, _) ->
+            let startDay = weekNumber * daysPerWeek - startDayOfWeek
             {
-                StartDate = DateOnly(year, month, List.min days)
-                EndDate = DateOnly(year, month, List.max days)
-                DaysActive = [||]
+                StartDate = startDate.AddDays(startDay)
+                EndDate = startDate.AddDays(startDay + daysPerWeek - 1)
+                DaysActive =
+                    Array.init daysPerWeek (fun dayOfWeek ->
+                        startDay + dayOfWeek > 0
+                        && startDay + dayOfWeek < dayCount)
             })
         |> Month
 
