@@ -8,6 +8,30 @@ open Google.Apis.Services
 open Google.Apis.Sheets.v4
 open Google.Apis.Sheets.v4.Data
 
+type Week =
+    {
+        StartDate: DateOnly
+        EndDate: DateOnly
+        DaysActive: bool array
+    }
+
+type Month = Month of Week list
+
+type Calendar = Calendar of Month list
+
+[<CLIMutable>]
+type Configuration =
+    {
+        SpreadsheetId: string
+        Year: int
+        FirstDayOfWeek: DayOfWeek
+    }
+
+[<Literal>]
+let credentialsFileName = "credentials.json"
+
+let DaysPerWeek = Enum.GetValues<DayOfWeek>().Length
+
 module NullCoalesce =
     let coalesce (b: 'a Lazy) (a: 'a) =
         if obj.ReferenceEquals(a, null) then
@@ -18,11 +42,9 @@ module NullCoalesce =
 module Int =
     let between (min, max) x = x >= min && x <= max
 
-[<CLIMutable>]
-type Configuration = { SpreadsheetId: string; Year: int }
-
-[<Literal>]
-let credentialsFileName = "credentials.json"
+module DayOfWeek =
+    let diff (x: DayOfWeek, y: DayOfWeek) =
+        (int x - int y + DaysPerWeek) % DaysPerWeek
 
 let getRootDirectoryPath () =
     let executableFilePath = Assembly.GetExecutingAssembly().Location
@@ -55,32 +77,20 @@ let createSheetsService rootDirectoryPath =
 
     new SheetsService(initializer)
 
-type Week =
-    {
-        StartDate: DateOnly
-        EndDate: DateOnly
-        DaysActive: bool array
-    }
-
-type Month = Month of Week list
-
-type Calendar = Calendar of Month list
-
-let calculateCalendar year =
-    let daysPerWeek = Enum.GetValues<DayOfWeek>().Length
+let calculateCalendar firstDayOfWeeek year =
     let calculateMonth month =
         let dayCount = DateTime.DaysInMonth(year, month)
         let startDate = DateOnly(year, month, 1)
-        let startDayOfWeek = startDate.DayOfWeek |> int
+        let monthFistDayOfWeek = DayOfWeek.diff (startDate.DayOfWeek, firstDayOfWeeek)
         [ 1..dayCount ]
-        |> List.groupBy (fun day -> (day - 1 + startDayOfWeek) / daysPerWeek)
+        |> List.groupBy (fun day -> (day - 1 + monthFistDayOfWeek) / DaysPerWeek)
         |> List.map (fun (weekNumber, _) ->
-            let startDay = weekNumber * daysPerWeek - startDayOfWeek
+            let startDay = weekNumber * DaysPerWeek - monthFistDayOfWeek
             {
                 StartDate = startDate.AddDays(startDay)
-                EndDate = startDate.AddDays(startDay + daysPerWeek - 1)
+                EndDate = startDate.AddDays(startDay + DaysPerWeek - 1)
                 DaysActive =
-                    Array.init daysPerWeek (fun dayOfWeek ->
+                    Array.init DaysPerWeek (fun dayOfWeek ->
                         startDay + dayOfWeek
                         |> Int.between (0, dayCount - 1))
             })
@@ -122,6 +132,6 @@ let configuration = createConfiguration rootDirectoryPath
 
 let sheetsService = createSheetsService rootDirectoryPath
 
-let calendar = calculateCalendar configuration.Year
+let calendar = calculateCalendar configuration.FirstDayOfWeek configuration.Year
 
 renderCalendar sheetsService configuration calendar
