@@ -47,6 +47,13 @@ module DayOfWeek =
     let diff (x: DayOfWeek, y: DayOfWeek) =
         (int x - int y + DaysPerWeek) % DaysPerWeek
 
+module Calendar =
+    let getMonths (Calendar months) = months
+
+    let getWeeks (Calendar months) =
+        months
+        |> List.collect (fun (Month weeks) -> weeks)
+
 let getRootDirectoryPath () =
     let executableFilePath = Assembly.GetExecutingAssembly().Location
     Path.GetDirectoryName(executableFilePath)
@@ -102,7 +109,7 @@ let calculateCalendar firstDayOfWeeek year =
     |> List.map calculateMonth
     |> Calendar
 
-let renderCalendar (sheetsService: SheetsService) configuration (Calendar months) =
+let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let spreadsheetId = configuration.SpreadsheetId
 
     sheetsService
@@ -120,12 +127,7 @@ let renderCalendar (sheetsService: SheetsService) configuration (Calendar months
         )
 
     let updateRequestBody =
-        BatchUpdateSpreadsheetRequest(
-            Requests =
-                [|
-                    clearFormattingRequest
-                |]
-        )
+        BatchUpdateSpreadsheetRequest(Requests = [| clearFormattingRequest |])
 
     sheetsService
         .Spreadsheets
@@ -134,8 +136,8 @@ let renderCalendar (sheetsService: SheetsService) configuration (Calendar months
     |> ignore
 
     let values =
-        months
-        |> List.collect (fun (Month weeks) -> weeks)
+        calendar
+        |> Calendar.getWeeks
         |> List.map (fun week -> [ week.StartDate; week.EndDate ])
         |> List.map (fun list -> list |> List.toArray |> Array.map box :> IList<obj>)
         |> List.toArray
@@ -168,24 +170,28 @@ let renderCalendar (sheetsService: SheetsService) configuration (Calendar months
             )
         updateCellFormatRequest
 
-    let range =
+    let createSingleCellRange (rowIndex, columnIndex) =
         GridRange(
-            StartColumnIndex = 2,
-            EndColumnIndex = 3,
-            StartRowIndex = 1,
-            EndRowIndex = 2,
+            StartColumnIndex = Nullable columnIndex,
+            EndColumnIndex = Nullable(columnIndex + 1),
+            StartRowIndex = Nullable rowIndex,
+            EndRowIndex = Nullable(rowIndex + 1),
             SheetId = configuration.SheetId
         )
     let greyColor = Color(Red = 0.75f, Green = 0.75f, Blue = 0.75f)
-    let updateCellFormatRequest = createSetBackgroundColorRequest range greyColor
+
+    let updateCellFormatRequests =
+        [
+            for (weekNumber, week) in calendar |> Calendar.getWeeks |> List.indexed do
+                for dayOfWeekNumber in [ 0 .. DaysPerWeek - 1 ] do
+                    if not week.DaysActive[dayOfWeekNumber] then
+                        let range = createSingleCellRange (weekNumber + 1, dayOfWeekNumber + 2)
+                        createSetBackgroundColorRequest range greyColor
+        ]
+        |> List.toArray
 
     let updateRequestBody =
-        BatchUpdateSpreadsheetRequest(
-            Requests =
-                [|
-                    updateCellFormatRequest
-                |]
-        )
+        BatchUpdateSpreadsheetRequest(Requests = updateCellFormatRequests)
 
     sheetsService
         .Spreadsheets
