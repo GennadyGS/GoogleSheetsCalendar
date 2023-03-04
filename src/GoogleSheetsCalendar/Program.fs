@@ -23,6 +23,7 @@ type Calendar = Calendar of Month list
 type Configuration =
     {
         SpreadsheetId: string
+        SheetId: int
         Year: int
         FirstDayOfWeek: DayOfWeek
     }
@@ -104,6 +105,34 @@ let calculateCalendar firstDayOfWeeek year =
 let renderCalendar (sheetsService: SheetsService) configuration (Calendar months) =
     let spreadsheetId = configuration.SpreadsheetId
 
+    sheetsService
+        .Spreadsheets
+        .Values
+        .Clear(ClearValuesRequest(), spreadsheetId, "A1:ZZ")
+        .Execute()
+    |> ignore
+
+    let clearFormattingRequest = Request()
+    clearFormattingRequest.UpdateCells <-
+        UpdateCellsRequest(
+            Range = GridRange(SheetId = configuration.SheetId),
+            Fields = nameof (Unchecked.defaultof<CellData>.UserEnteredFormat)
+        )
+
+    let updateRequestBody =
+        BatchUpdateSpreadsheetRequest(
+            Requests =
+                [|
+                    clearFormattingRequest
+                |]
+        )
+
+    sheetsService
+        .Spreadsheets
+        .BatchUpdate(updateRequestBody, spreadsheetId)
+        .Execute()
+    |> ignore
+
     let values =
         months
         |> List.collect (fun (Month weeks) -> weeks)
@@ -113,16 +142,54 @@ let renderCalendar (sheetsService: SheetsService) configuration (Calendar months
 
     let updateData =
         [|
-            ValueRange(Range = "A2:B", Values = values)
+            ValueRange(Range = "R2C1:C2", Values = values)
         |]
 
     let valueUpdateRequestBody =
-        new BatchUpdateValuesRequest(ValueInputOption = "USER_ENTERED", Data = updateData)
+        BatchUpdateValuesRequest(ValueInputOption = "USER_ENTERED", Data = updateData)
 
     sheetsService
         .Spreadsheets
         .Values
         .BatchUpdate(valueUpdateRequestBody, spreadsheetId)
+        .Execute()
+    |> ignore
+
+    let createSetBackgroundColorRequest gridRange color =
+        let updateCellFormatRequest = Request()
+        updateCellFormatRequest.RepeatCell <-
+            let cellFormat = CellFormat(BackgroundColor = color)
+            let cellData = CellData(UserEnteredFormat = cellFormat)
+            RepeatCellRequest(
+                Range = gridRange,
+                Cell = cellData,
+                Fields =
+                    $"{nameof (cellData.UserEnteredFormat)}.{nameof (cellFormat.BackgroundColor)}"
+            )
+        updateCellFormatRequest
+
+    let range =
+        GridRange(
+            StartColumnIndex = 2,
+            EndColumnIndex = 3,
+            StartRowIndex = 1,
+            EndRowIndex = 2,
+            SheetId = configuration.SheetId
+        )
+    let greyColor = Color(Red = 0.75f, Green = 0.75f, Blue = 0.75f)
+    let updateCellFormatRequest = createSetBackgroundColorRequest range greyColor
+
+    let updateRequestBody =
+        BatchUpdateSpreadsheetRequest(
+            Requests =
+                [|
+                    updateCellFormatRequest
+                |]
+        )
+
+    sheetsService
+        .Spreadsheets
+        .BatchUpdate(updateRequestBody, spreadsheetId)
         .Execute()
     |> ignore
 
