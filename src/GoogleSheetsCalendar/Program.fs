@@ -110,6 +110,7 @@ let calculateCalendar firstDayOfWeeek year =
     |> Calendar
 
 let renderCalendar (sheetsService: SheetsService) configuration calendar =
+    let weeks = Calendar.getWeeks calendar
     let spreadsheetId = configuration.SpreadsheetId
 
     sheetsService
@@ -135,27 +136,39 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         .Execute()
     |> ignore
 
-    let values =
-        calendar
-        |> Calendar.getWeeks
-        |> List.map (fun week -> [ week.StartDate; week.EndDate ])
-        |> List.map (fun list -> list |> List.toArray |> Array.map box :> IList<obj>)
-        |> List.toArray
+    let updateValuesInRange range values =
+        let valueArray =
+            values
+            |> List.toArray
+            |> Array.map (
+                List.toArray
+                >> Array.map box
+                >> (fun array -> array :> IList<obj>)
+            )
+        let updateData =
+            [|
+                ValueRange(Range = range, Values = valueArray)
+            |]
 
-    let updateData =
-        [|
-            ValueRange(Range = "R2C1:C2", Values = values)
-        |]
+        let valueUpdateRequestBody =
+            BatchUpdateValuesRequest(ValueInputOption = "USER_ENTERED", Data = updateData)
 
-    let valueUpdateRequestBody =
-        BatchUpdateValuesRequest(ValueInputOption = "USER_ENTERED", Data = updateData)
+        sheetsService
+            .Spreadsheets
+            .Values
+            .BatchUpdate(valueUpdateRequestBody, spreadsheetId)
+            .Execute()
+        |> ignore
 
-    sheetsService
-        .Spreadsheets
-        .Values
-        .BatchUpdate(valueUpdateRequestBody, spreadsheetId)
-        .Execute()
-    |> ignore
+    let dateValues =
+        [
+            for week in weeks -> [ week.StartDate; week.EndDate ]
+        ]
+    updateValuesInRange "R2C1:C2" dateValues
+
+    let weekSumFormula = @"=SUM(INDIRECT(""R[0]C[-7]:R[0]C[-1]"", FALSE))"
+    let weekSumFormulaValues = List.replicate weeks.Length [ weekSumFormula ]
+    updateValuesInRange "R2C10:C10" weekSumFormulaValues
 
     let createSetBackgroundColorRequest gridRange color =
         let updateCellFormatRequest = Request()
@@ -181,14 +194,13 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let greyColor = Color(Red = 0.75f, Green = 0.75f, Blue = 0.75f)
 
     let updateCellFormatRequests =
-        [
-            for (weekNumber, week) in calendar |> Calendar.getWeeks |> List.indexed do
+        [|
+            for (weekNumber, week) in List.indexed weeks do
                 for dayOfWeekNumber in [ 0 .. DaysPerWeek - 1 ] do
                     if not week.DaysActive[dayOfWeekNumber] then
                         let range = createSingleCellRange (weekNumber + 1, dayOfWeekNumber + 2)
                         createSetBackgroundColorRequest range greyColor
-        ]
-        |> List.toArray
+        |]
 
     let updateRequestBody =
         BatchUpdateSpreadsheetRequest(Requests = updateCellFormatRequests)
