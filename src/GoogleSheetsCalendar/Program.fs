@@ -113,13 +113,6 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let weeks = Calendar.getWeeks calendar
     let spreadsheetId = configuration.SpreadsheetId
 
-    sheetsService
-        .Spreadsheets
-        .Values
-        .Clear(ClearValuesRequest(), spreadsheetId, "A1:ZZ")
-        .Execute()
-    |> ignore
-
     let clearFormattingRequest = Request()
     clearFormattingRequest.UpdateCells <-
         UpdateCellsRequest(
@@ -169,6 +162,29 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let weekSumFormula = @"=SUM(INDIRECT(""R[0]C[-7]:R[0]C[-1]"", FALSE))"
     let weekSumFormulaValues = List.replicate weeks.Length [ weekSumFormula ]
     updateValuesInRange "R2C10:C10" weekSumFormulaValues
+
+    let monthSumFormulaValues =
+        calendar
+        |> Calendar.getMonths
+        |> List.scan
+            (fun (_, nextWeekStartNumber) (Month weeks) -> (weeks, nextWeekStartNumber + weeks.Length))
+            ([], 0)
+        |> List.collect (fun (weeks, nextWeekStartNumber) ->
+            weeks
+            |> List.map (fun _ -> (nextWeekStartNumber - weeks.Length, weeks.Length)))
+        |> List.map (fun (startWeekNumber, weekCount) ->
+            [
+                @$"=SUM(INDIRECT(""R{startWeekNumber + 2}C[-1]:R{startWeekNumber + 2 + weekCount - 1}C[-1]"", FALSE))"
+            ])
+    updateValuesInRange "R2C11:C11" monthSumFormulaValues
+
+    let dayOfweekSumFormula =
+        @$"=SUM(INDIRECT(""R2C[0]:R{weeks.Length + 1}C[0]"", FALSE))"
+    let dayOfWeekSumFormulaValues =
+        [
+            List.replicate (DaysPerWeek + 2) dayOfweekSumFormula
+        ]
+    updateValuesInRange $"R{weeks.Length + 2}C3:C12" dayOfWeekSumFormulaValues
 
     let createSetBackgroundColorRequest gridRange color =
         let updateCellFormatRequest = Request()
