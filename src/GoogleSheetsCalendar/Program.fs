@@ -1,6 +1,7 @@
 ﻿open System
 open System.IO
 open System.Collections.Generic
+open System.Globalization
 open System.Reflection
 open Microsoft.Extensions.Configuration
 open Google.Apis.Auth.OAuth2
@@ -46,6 +47,9 @@ module Int =
 module DayOfWeek =
     let diff (x: DayOfWeek, y: DayOfWeek) =
         (int x - int y + DaysPerWeek) % DaysPerWeek
+
+    let addDays days (dayOfWeek: DayOfWeek) =
+        (int dayOfWeek + int days) % DaysPerWeek |> LanguagePrimitives.EnumOfValue
 
 module Calendar =
     let getMonths (Calendar months) = months
@@ -161,6 +165,16 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             .BatchUpdate(valueUpdateRequestBody, spreadsheetId)
             .Execute()
         |> ignore
+
+    let dayOfWeekNames =
+        Enum.GetValues<DayOfWeek>()
+        |> Array.map (DayOfWeek.addDays (int configuration.FirstDayOfWeek))
+        |> Array.map CultureInfo.InvariantCulture.DateTimeFormat.GetDayName
+        |> Array.toList
+
+    ["Start Date"; "End Date"; yield! dayOfWeekNames; "Week Total"; "Month Total"]
+    |> List.singleton
+    |> updateValuesInRange "R1C1:R1" 
 
     let dateValues =
         [
