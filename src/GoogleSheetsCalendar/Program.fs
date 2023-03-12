@@ -54,6 +54,15 @@ module Calendar =
         months
         |> List.collect (fun (Month weeks) -> weeks)
 
+    let getWeekNumberRanges (Calendar months) =
+        months
+        |> List.scan
+            (fun (_, nextWeekStartNumber) (Month weeks) ->
+                (weeks, nextWeekStartNumber + weeks.Length))
+            ([], 0)
+        |> List.map (fun (weeks, nextWeekStartNumber) ->
+            (nextWeekStartNumber - weeks.Length, weeks.Length))
+
 let getRootDirectoryPath () =
     let executableFilePath = Assembly.GetExecutingAssembly().Location
     Path.GetDirectoryName(executableFilePath)
@@ -165,17 +174,12 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
     let monthSumFormulaValues =
         calendar
-        |> Calendar.getMonths
-        |> List.scan
-            (fun (_, nextWeekStartNumber) (Month weeks) -> (weeks, nextWeekStartNumber + weeks.Length))
-            ([], 0)
-        |> List.collect (fun (weeks, nextWeekStartNumber) ->
-            weeks
-            |> List.map (fun _ -> (nextWeekStartNumber - weeks.Length, weeks.Length)))
-        |> List.map (fun (startWeekNumber, weekCount) ->
-            [
-                @$"=SUM(INDIRECT(""R{startWeekNumber + 2}C[-1]:R{startWeekNumber + 2 + weekCount - 1}C[-1]"", FALSE))"
-            ])
+        |> Calendar.getWeekNumberRanges
+        |> List.collect (fun (startWeekNumber, weekCount) ->
+            @$"=SUM(INDIRECT(""R{startWeekNumber + 2}C[-1]:R{startWeekNumber + 2 + weekCount - 1}C[-1]"", FALSE))"
+            |> List.singleton
+            |> List.replicate weekCount)
+
     updateValuesInRange "R2C11:C11" monthSumFormulaValues
 
     let dayOfweekSumFormula =
