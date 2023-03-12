@@ -222,8 +222,29 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                         createSetBackgroundColorRequest range greyColor
         |]
 
+    let createMergeCellsRequest gridRange =
+        let result = new Request()
+        result.MergeCells <- MergeCellsRequest(MergeType = "MERGE_ALL", Range = gridRange)
+        result
+
+    let mergeRequests =
+        calendar
+        |> Calendar.getWeekNumberRanges
+        |> List.map (fun (startWeekNumber, weekCount) ->
+            GridRange(
+                SheetId = configuration.SheetId,
+                StartRowIndex = startWeekNumber + 1,
+                EndRowIndex = startWeekNumber + 1 + weekCount,
+                StartColumnIndex = 10,
+                EndColumnIndex = 11
+            )
+            |> createMergeCellsRequest)
+        |> List.toArray
+
     let updateRequestBody =
-        BatchUpdateSpreadsheetRequest(Requests = updateCellFormatRequests)
+        BatchUpdateSpreadsheetRequest(
+            Requests = Array.append updateCellFormatRequests mergeRequests
+        )
 
     sheetsService
         .Spreadsheets
