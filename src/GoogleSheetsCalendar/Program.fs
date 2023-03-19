@@ -248,15 +248,6 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                  |> String.concat ",")
         )
 
-    let setCellBackgroundColorRequests =
-        [|
-            for (weekNumber, week) in List.indexed weeks do
-                for dayOfWeekNumber in [ 0 .. DaysPerWeek - 1 ] do
-                    if not week.DaysActive[dayOfWeekNumber] then
-                        let range = createSingleCellRange (weekNumber + 1, dayOfWeekNumber + 2)
-                        createSetBackgroundColorRequest range greyColor
-        |]
-
     let createMergeCellsRequest gridRange =
         let result = new Request()
         result.MergeCells <- MergeCellsRequest(MergeType = "MERGE_ALL", Range = gridRange)
@@ -276,13 +267,22 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             |> createMergeCellsRequest)
         |> List.toArray
 
+    let setCellBackgroundColorRequests =
+        [|
+            for (weekNumber, week) in List.indexed weeks do
+                for dayOfWeekNumber in [ 0 .. DaysPerWeek - 1 ] do
+                    if not week.DaysActive[dayOfWeekNumber] then
+                        let range = createSingleCellRange (weekNumber + 1, dayOfWeekNumber + 2)
+                        createSetBackgroundColorRequest range greyColor
+        |]
+
     let updateRequestBody =
         BatchUpdateSpreadsheetRequest(
             Requests =
                 [|
                     setSheetPropertiesRequest
-                    yield! setCellBackgroundColorRequests
                     yield! mergeRequests
+                    yield! setCellBackgroundColorRequests
                 |]
         )
 
