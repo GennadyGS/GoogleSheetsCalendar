@@ -20,6 +20,14 @@ type Month = Month of Week list
 
 type Calendar = Calendar of Month list
 
+type Borders =
+    {
+        Left: Border option
+        Right: Border option
+        Top: Border option
+        Bottom: Border option
+    }
+
 [<CLIMutable>]
 type Configuration =
     {
@@ -67,6 +75,23 @@ module Calendar =
             ([], 0)
         |> List.map (fun (weeks, nextWeekStartNumber) ->
             (nextWeekStartNumber - weeks.Length, weeks.Length))
+
+module Borders =
+    let none =
+        {
+            Left = None
+            Right = None
+            Top = None
+            Bottom = None
+        }
+
+    let outer border =
+        {
+            Left = Some border
+            Right = Some border
+            Top = Some border
+            Bottom = Some border
+        }
 
 let getRootDirectoryPath () =
     let executableFilePath = Assembly.GetExecutingAssembly().Location
@@ -267,6 +292,75 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             |> createMergeCellsRequest)
         |> List.toArray
 
+    let createBorderRequest (range, borders) =
+        let updateBordersRequest = new Request()
+        updateBordersRequest.UpdateBorders <-
+            UpdateBordersRequest(
+                Range = range,
+                Left = Option.defaultValue null borders.Left,
+                Right = Option.defaultValue null borders.Right,
+                Top = Option.defaultValue null borders.Top,
+                Bottom = Option.defaultValue null borders.Bottom
+            )
+        updateBordersRequest
+
+    let solidBorder = new Border(Style = "SOLID")
+    let outerBordersRequest =
+        let range =
+            GridRange(
+                StartColumnIndex = Nullable 0,
+                EndColumnIndex = Nullable 11,
+                StartRowIndex = 0,
+                EndRowIndex = weeks.Length + 2,
+                SheetId = configuration.SheetId
+            )
+        createBorderRequest (range, Borders.outer solidBorder)
+
+    let monthBorderRequests =
+        calendar
+        |> Calendar.getWeekNumberRanges
+        |> List.map (fun (startWeekNumber, weekCount) ->
+            let range =
+                GridRange(
+                    StartColumnIndex = Nullable 0,
+                    EndColumnIndex = Nullable 11,
+                    StartRowIndex = startWeekNumber + 1,
+                    EndRowIndex = startWeekNumber + weekCount + 1,
+                    SheetId = configuration.SheetId
+                )
+            createBorderRequest (range, Borders.outer solidBorder))
+    
+    let dayOfWeeksBorderRequest =
+        let range =
+            GridRange(
+                StartColumnIndex = Nullable 2,
+                EndColumnIndex = Nullable (2 + DaysPerWeek),
+                StartRowIndex = 0,
+                EndRowIndex = weeks.Length + 2,
+                SheetId = configuration.SheetId
+            )
+        createBorderRequest (range, Borders.outer solidBorder)
+
+    let monthTotalBorderRequest =
+        let range =
+            GridRange(
+                StartColumnIndex = Nullable (2 + DaysPerWeek),
+                EndColumnIndex = Nullable (3 + DaysPerWeek),
+                StartRowIndex = 0,
+                EndRowIndex = weeks.Length + 2,
+                SheetId = configuration.SheetId
+            )
+        createBorderRequest (range, Borders.outer solidBorder)
+        
+
+    let setBordersRequests =
+        [
+            outerBordersRequest
+            yield! monthBorderRequests
+            dayOfWeeksBorderRequest
+            monthTotalBorderRequest
+        ]
+
     let setCellBackgroundColorRequests =
         [|
             for (weekNumber, week) in List.indexed weeks do
@@ -282,6 +376,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 [|
                     setSheetPropertiesRequest
                     yield! mergeRequests
+                    yield! setBordersRequests
                     yield! setCellBackgroundColorRequests
                 |]
         )
