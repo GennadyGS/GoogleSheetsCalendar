@@ -49,7 +49,8 @@ module DayOfWeek =
         (int x - int y + DaysPerWeek) % DaysPerWeek
 
     let addDays days (dayOfWeek: DayOfWeek) =
-        (int dayOfWeek + int days) % DaysPerWeek |> LanguagePrimitives.EnumOfValue
+        (int dayOfWeek + int days) % DaysPerWeek
+        |> LanguagePrimitives.EnumOfValue
 
 module Calendar =
     let getMonths (Calendar months) = months
@@ -172,9 +173,15 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         |> Array.map CultureInfo.InvariantCulture.DateTimeFormat.GetDayName
         |> Array.toList
 
-    ["Start Date"; "End Date"; yield! dayOfWeekNames; "Week Total"; "Month Total"]
+    [
+        "Start Date"
+        "End Date"
+        yield! dayOfWeekNames
+        "Week Total"
+        "Month Total"
+    ]
     |> List.singleton
-    |> updateValuesInRange "R1C1:R1" 
+    |> updateValuesInRange "R1C1:R1"
 
     let dateValues =
         [
@@ -227,7 +234,21 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         )
     let greyColor = Color(Red = 0.75f, Green = 0.75f, Blue = 0.75f)
 
-    let updateCellFormatRequests =
+    let setSheetPropertiesRequest = new Request()
+    let sheetProperties =
+        SheetProperties(GridProperties = GridProperties(FrozenRowCount = 1, FrozenColumnCount = 2))
+    setSheetPropertiesRequest.UpdateSheetProperties <-
+        UpdateSheetPropertiesRequest(
+            Properties = sheetProperties,
+            Fields =
+                ([
+                    $"{nameof (sheetProperties.GridProperties)}.{nameof (sheetProperties.GridProperties.FrozenRowCount)}"
+                    $"{nameof (sheetProperties.GridProperties)}.{nameof (sheetProperties.GridProperties.FrozenColumnCount)}"
+                 ]
+                 |> String.concat ",")
+        )
+
+    let setCellBackgroundColorRequests =
         [|
             for (weekNumber, week) in List.indexed weeks do
                 for dayOfWeekNumber in [ 0 .. DaysPerWeek - 1 ] do
@@ -257,7 +278,12 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
     let updateRequestBody =
         BatchUpdateSpreadsheetRequest(
-            Requests = Array.append updateCellFormatRequests mergeRequests
+            Requests =
+                [|
+                    setSheetPropertiesRequest
+                    yield! setCellBackgroundColorRequests
+                    yield! mergeRequests
+                |]
         )
 
     sheetsService
