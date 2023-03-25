@@ -222,14 +222,14 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         calendar
         |> Calendar.getWeekNumberRanges
         |> List.collect (fun (startWeekNumber, weekCount) ->
-            @$"=SUM(INDIRECT(""R{startWeekNumber + 2}C[-1]:R{startWeekNumber + 2 + weekCount - 1}C[-1]"", FALSE))"
+            $"=SUM(INDIRECT(\"R{startWeekNumber + 2}C[-1]:R{startWeekNumber + 2 + weekCount - 1}C[-1]\", FALSE))"
             |> List.singleton
             |> List.replicate weekCount)
 
     updateValuesInRange "R2C11:C11" monthSumFormulaValues
 
     let dayOfweekSumFormula =
-        @$"=SUM(INDIRECT(""R2C[0]:R{weeks.Length + 1}C[0]"", FALSE))"
+        $"=SUM(INDIRECT(\"R2C[0]:R{weeks.Length + 1}C[0]\", FALSE))"
     let dayOfWeekSumFormulaValues =
         [
             List.replicate (DaysPerWeek + 2) dayOfweekSumFormula
@@ -369,7 +369,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         let range =
             GridRange(
                 StartColumnIndex = Nullable 2,
-                EndColumnIndex = Nullable (2 + DaysPerWeek),
+                EndColumnIndex = Nullable(2 + DaysPerWeek),
                 StartRowIndex = 0,
                 EndRowIndex = weeks.Length + 2,
                 SheetId = configuration.SheetId
@@ -379,8 +379,8 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let monthTotalBorderRequest =
         let range =
             GridRange(
-                StartColumnIndex = Nullable (2 + DaysPerWeek),
-                EndColumnIndex = Nullable (3 + DaysPerWeek),
+                StartColumnIndex = Nullable(2 + DaysPerWeek),
+                EndColumnIndex = Nullable(3 + DaysPerWeek),
                 StartRowIndex = 0,
                 EndRowIndex = weeks.Length + 2,
                 SheetId = configuration.SheetId
