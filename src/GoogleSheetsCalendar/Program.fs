@@ -124,29 +124,30 @@ let createSheetsService rootDirectoryPath =
 
     new SheetsService(initializer)
 
-let calculateCalendar firstDayOfWeeek year =
-    let calculateMonth month =
-        let dayCount = DateTime.DaysInMonth(year, month)
-        let startDate = DateOnly(year, month, 1)
-        let monthFistDayOfWeek = DayOfWeek.diff (startDate.DayOfWeek, firstDayOfWeeek)
-        [ 1..dayCount ]
-        |> List.groupBy (fun day -> (day - 1 + monthFistDayOfWeek) / DaysPerWeek)
-        |> List.map (fun (weekNumber, _) ->
-            let startDay = weekNumber * DaysPerWeek - monthFistDayOfWeek
-            {
-                StartDate = startDate.AddDays(startDay)
-                EndDate = startDate.AddDays(startDay + DaysPerWeek - 1)
-                DaysActive =
-                    Array.init DaysPerWeek (fun dayOfWeek ->
-                        startDay + dayOfWeek
-                        |> Int.between (0, dayCount - 1))
-            })
-        |> Month
+module CalendarCalculator = 
+    let calculate firstDayOfWeeek year =
+        let calculateMonth month =
+            let dayCount = DateTime.DaysInMonth(year, month)
+            let startDate = DateOnly(year, month, 1)
+            let monthFistDayOfWeek = DayOfWeek.diff (startDate.DayOfWeek, firstDayOfWeeek)
+            [ 1..dayCount ]
+            |> List.groupBy (fun day -> (day - 1 + monthFistDayOfWeek) / DaysPerWeek)
+            |> List.map (fun (weekNumber, _) ->
+                let startDay = weekNumber * DaysPerWeek - monthFistDayOfWeek
+                {
+                    StartDate = startDate.AddDays(startDay)
+                    EndDate = startDate.AddDays(startDay + DaysPerWeek - 1)
+                    DaysActive =
+                        Array.init DaysPerWeek (fun dayOfWeek ->
+                            startDay + dayOfWeek
+                            |> Int.between (0, dayCount - 1))
+                })
+            |> Month
 
-    let monthCount = DateOnly(year + 1, 1, 1).AddDays(-1).Month
-    [ 1..monthCount ]
-    |> List.map calculateMonth
-    |> Calendar
+        let monthCount = DateOnly(year + 1, 1, 1).AddDays(-1).Month
+        [ 1..monthCount ]
+        |> List.map calculateMonth
+        |> Calendar
 
 let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let weeks = Calendar.getWeeks calendar
@@ -429,6 +430,6 @@ let configuration = createConfiguration rootDirectoryPath
 
 let sheetsService = createSheetsService rootDirectoryPath
 
-let calendar = calculateCalendar configuration.FirstDayOfWeek configuration.Year
+let calendar = CalendarCalculator.calculate configuration.FirstDayOfWeek configuration.Year
 
 renderCalendar sheetsService configuration calendar
