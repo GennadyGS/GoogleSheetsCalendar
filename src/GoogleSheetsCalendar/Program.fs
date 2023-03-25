@@ -273,6 +273,15 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                  |> String.concat ",")
         )
 
+    let createUnmergeCellsRequest gridRange =
+        let result = new Request()
+        result.UnmergeCells <- UnmergeCellsRequest(Range = gridRange)
+        result
+
+    let unmergeAllRequest =
+        GridRange(SheetId = configuration.SheetId)
+        |> createUnmergeCellsRequest
+
     let createMergeCellsRequest gridRange =
         let result = new Request()
         result.MergeCells <- MergeCellsRequest(MergeType = "MERGE_ALL", Range = gridRange)
@@ -329,7 +338,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                     SheetId = configuration.SheetId
                 )
             createBorderRequest (range, Borders.outer solidBorder))
-    
+
     let dayOfWeeksBorderRequest =
         let range =
             GridRange(
@@ -351,7 +360,6 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 SheetId = configuration.SheetId
             )
         createBorderRequest (range, Borders.outer solidBorder)
-        
 
     let setBordersRequests =
         [
@@ -375,6 +383,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             Requests =
                 [|
                     setSheetPropertiesRequest
+                    unmergeAllRequest
                     yield! mergeRequests
                     yield! setBordersRequests
                     yield! setCellBackgroundColorRequests
