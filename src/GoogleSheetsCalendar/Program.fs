@@ -273,6 +273,32 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                  |> String.concat ",")
         )
 
+    let createDeleteDimensionRequest dimensionRange =
+        let result = new Request()
+        result.DeleteDimension <- DeleteDimensionRequest(Range = dimensionRange)
+        result
+
+    let createAppendDimensionRequest (sheetId: int, dimension, length: int) =
+        let result = new Request()
+        result.AppendDimension <-
+            AppendDimensionRequest(SheetId = sheetId, Dimension = dimension, Length = length)
+        result
+
+    let createSetDimensionLengthRequests (sheetId, dimension, length) =
+        [
+            createAppendDimensionRequest (sheetId, dimension, length)
+            let deleteDimensionRange =
+                DimensionRange(Dimension = dimension, StartIndex = length)
+            createDeleteDimensionRequest deleteDimensionRange
+        ]
+
+    let setDimensionLengthRequests =
+        [
+            yield! createSetDimensionLengthRequests (configuration.SheetId, "COLUMNS", 11)
+            yield!
+                createSetDimensionLengthRequests (configuration.SheetId, "ROWS", 2 + weeks.Length)
+        ]
+
     let createUnmergeCellsRequest gridRange =
         let result = new Request()
         result.UnmergeCells <- UnmergeCellsRequest(Range = gridRange)
@@ -383,6 +409,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             Requests =
                 [|
                     setSheetPropertiesRequest
+                    yield! setDimensionLengthRequests
                     unmergeAllRequest
                     yield! mergeRequests
                     yield! setBordersRequests
