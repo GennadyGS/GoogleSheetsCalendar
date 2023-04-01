@@ -124,7 +124,7 @@ let createSheetsService rootDirectoryPath =
 
     new SheetsService(initializer)
 
-module CalendarCalculator = 
+module CalendarCalculator =
     let calculate firstDayOfWeeek year =
         let calculateMonth month =
             let dayCount = DateTime.DaysInMonth(year, month)
@@ -153,21 +153,30 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let weeks = Calendar.getWeeks calendar
     let spreadsheetId = configuration.SpreadsheetId
 
-    let clearFormattingRequest = Request()
-    clearFormattingRequest.UpdateCells <-
-        UpdateCellsRequest(
-            Range = GridRange(SheetId = configuration.SheetId),
-            Fields = nameof (Unchecked.defaultof<CellData>.UserEnteredFormat)
-        )
+    let clearFormatting () =
+        let createClearFormattingRequest sheetId =
+            let request = Request()
+            request.UpdateCells <-
+                UpdateCellsRequest(
+                    Range = GridRange(SheetId = (sheetId |> Option.toNullable)),
+                    Fields = nameof (Unchecked.defaultof<CellData>.UserEnteredFormat)
+                )
+            request
 
-    let updateRequestBody =
-        BatchUpdateSpreadsheetRequest(Requests = [| clearFormattingRequest |])
+        let clearFormattingRequest =
+            Some configuration.SheetId
+            |> createClearFormattingRequest
 
-    sheetsService
-        .Spreadsheets
-        .BatchUpdate(updateRequestBody, spreadsheetId)
-        .Execute()
-    |> ignore
+        let updateRequestBody =
+            BatchUpdateSpreadsheetRequest(Requests = [| clearFormattingRequest |])
+
+        sheetsService
+            .Spreadsheets
+            .BatchUpdate(updateRequestBody, spreadsheetId)
+            .Execute()
+        |> ignore
+
+    clearFormatting ()
 
     let updateValuesInRange range values =
         let valueArray =
@@ -193,49 +202,52 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             .Execute()
         |> ignore
 
-    let dayOfWeekNames =
-        Enum.GetValues<DayOfWeek>()
-        |> Array.map (DayOfWeek.addDays (int configuration.FirstDayOfWeek))
-        |> Array.map CultureInfo.InvariantCulture.DateTimeFormat.GetDayName
-        |> Array.toList
+    let updateValues () =
+        let dayOfWeekNames =
+            Enum.GetValues<DayOfWeek>()
+            |> Array.map (DayOfWeek.addDays (int configuration.FirstDayOfWeek))
+            |> Array.map CultureInfo.InvariantCulture.DateTimeFormat.GetDayName
+            |> Array.toList
 
-    [
-        "Start Date"
-        "End Date"
-        yield! dayOfWeekNames
-        "Week Total"
-        "Month Total"
-    ]
-    |> List.singleton
-    |> updateValuesInRange "R1C1:R1"
-
-    let dateValues =
         [
-            for week in weeks -> [ week.StartDate; week.EndDate ]
+            "Start Date"
+            "End Date"
+            yield! dayOfWeekNames
+            "Week Total"
+            "Month Total"
         ]
-    updateValuesInRange "R2C1:C2" dateValues
+        |> List.singleton
+        |> updateValuesInRange "R1C1:R1"
 
-    let weekSumFormula = @"=SUM(INDIRECT(""R[0]C[-7]:R[0]C[-1]"", FALSE))"
-    let weekSumFormulaValues = List.replicate weeks.Length [ weekSumFormula ]
-    updateValuesInRange "R2C10:C10" weekSumFormulaValues
+        let dateValues =
+            [
+                for week in weeks -> [ week.StartDate; week.EndDate ]
+            ]
+        updateValuesInRange "R2C1:C2" dateValues
 
-    let monthSumFormulaValues =
-        calendar
-        |> Calendar.getWeekNumberRanges
-        |> List.collect (fun (startWeekNumber, weekCount) ->
-            $"=SUM(INDIRECT(\"R{startWeekNumber + 2}C[-1]:R{startWeekNumber + 2 + weekCount - 1}C[-1]\", FALSE))"
-            |> List.singleton
-            |> List.replicate weekCount)
+        let weekSumFormula = @"=SUM(INDIRECT(""R[0]C[-7]:R[0]C[-1]"", FALSE))"
+        let weekSumFormulaValues = List.replicate weeks.Length [ weekSumFormula ]
+        updateValuesInRange "R2C10:C10" weekSumFormulaValues
 
-    updateValuesInRange "R2C11:C11" monthSumFormulaValues
+        let monthSumFormulaValues =
+            calendar
+            |> Calendar.getWeekNumberRanges
+            |> List.collect (fun (startWeekNumber, weekCount) ->
+                $"=SUM(INDIRECT(\"R{startWeekNumber + 2}C[-1]:R{startWeekNumber + 2 + weekCount - 1}C[-1]\", FALSE))"
+                |> List.singleton
+                |> List.replicate weekCount)
 
-    let dayOfweekSumFormula =
-        $"=SUM(INDIRECT(\"R2C[0]:R{weeks.Length + 1}C[0]\", FALSE))"
-    let dayOfWeekSumFormulaValues =
-        [
-            List.replicate (DaysPerWeek + 2) dayOfweekSumFormula
-        ]
-    updateValuesInRange $"R{weeks.Length + 2}C3:C12" dayOfWeekSumFormulaValues
+        updateValuesInRange "R2C11:C11" monthSumFormulaValues
+
+        let dayOfweekSumFormula =
+            $"=SUM(INDIRECT(\"R2C[0]:R{weeks.Length + 1}C[0]\", FALSE))"
+        let dayOfWeekSumFormulaValues =
+            [
+                List.replicate (DaysPerWeek + 2) dayOfweekSumFormula
+            ]
+        updateValuesInRange $"R{weeks.Length + 2}C3:C12" dayOfWeekSumFormulaValues
+
+    updateValues ()
 
     let createSetBackgroundColorRequest gridRange color =
         let updateCellFormatRequest = Request()
@@ -260,19 +272,30 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         )
     let greyColor = Color(Red = 0.75f, Green = 0.75f, Blue = 0.75f)
 
-    let setSheetPropertiesRequest = new Request()
-    let sheetProperties =
-        SheetProperties(GridProperties = GridProperties(FrozenRowCount = 1, FrozenColumnCount = 2))
-    setSheetPropertiesRequest.UpdateSheetProperties <-
-        UpdateSheetPropertiesRequest(
-            Properties = sheetProperties,
-            Fields =
-                ([
-                    $"{nameof (sheetProperties.GridProperties)}.{nameof (sheetProperties.GridProperties.FrozenRowCount)}"
-                    $"{nameof (sheetProperties.GridProperties)}.{nameof (sheetProperties.GridProperties.FrozenColumnCount)}"
-                 ]
-                 |> String.concat ",")
-        )
+    let createSetSheetPropertiesRequest (frozenRowCount, frozenColumnCount) =
+        let request = new Request()
+        let sheetProperties =
+            SheetProperties(
+                GridProperties =
+                    GridProperties(
+                        FrozenRowCount = Option.toNullable frozenRowCount,
+                        FrozenColumnCount = Option.toNullable frozenColumnCount
+                    )
+            )
+
+        request.UpdateSheetProperties <-
+            UpdateSheetPropertiesRequest(
+                Properties = sheetProperties,
+                Fields =
+                    ([
+                        $"{nameof (sheetProperties.GridProperties)}.{nameof (sheetProperties.GridProperties.FrozenRowCount)}"
+                        $"{nameof (sheetProperties.GridProperties)}.{nameof (sheetProperties.GridProperties.FrozenColumnCount)}"
+                     ]
+                     |> String.concat ",")
+            )
+        request
+
+    let setSheetPropertiesRequest = createSetSheetPropertiesRequest (Some 1, Some 2)
 
     let createDeleteDimensionRequest dimensionRange =
         let result = new Request()
@@ -430,6 +453,7 @@ let configuration = createConfiguration rootDirectoryPath
 
 let sheetsService = createSheetsService rootDirectoryPath
 
-let calendar = CalendarCalculator.calculate configuration.FirstDayOfWeek configuration.Year
+let calendar =
+    CalendarCalculator.calculate configuration.FirstDayOfWeek configuration.Year
 
 renderCalendar sheetsService configuration calendar
