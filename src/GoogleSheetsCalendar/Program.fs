@@ -249,19 +249,6 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
     updateValues ()
 
-    let createSetBackgroundColorRequest gridRange color =
-        let updateCellFormatRequest = Request()
-        updateCellFormatRequest.RepeatCell <-
-            let cellFormat = CellFormat(BackgroundColor = color)
-            let cellData = CellData(UserEnteredFormat = cellFormat)
-            RepeatCellRequest(
-                Range = gridRange,
-                Cell = cellData,
-                Fields =
-                    $"{nameof (cellData.UserEnteredFormat)}.{nameof (cellFormat.BackgroundColor)}"
-            )
-        updateCellFormatRequest
-
     let createSingleCellRange (rowIndex, columnIndex) =
         GridRange(
             StartColumnIndex = Nullable columnIndex,
@@ -337,7 +324,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         result.MergeCells <- MergeCellsRequest(MergeType = "MERGE_ALL", Range = gridRange)
         result
 
-    let mergeRequests =
+    let mergeCellRequests =
         calendar
         |> Calendar.getWeekNumberRanges
         |> List.map (fun (startWeekNumber, weekCount) ->
@@ -351,7 +338,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             |> createMergeCellsRequest)
         |> List.toArray
 
-    let createBorderRequest (range, borders) =
+    let createUpdateBorderRequest (range, borders) =
         let updateBordersRequest = new Request()
         updateBordersRequest.UpdateBorders <-
             UpdateBordersRequest(
@@ -364,7 +351,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         updateBordersRequest
 
     let solidBorder = new Border(Style = "SOLID")
-    let outerBordersRequest =
+    let outerBorderRequest =
         let range =
             GridRange(
                 StartColumnIndex = Nullable 0,
@@ -373,7 +360,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 EndRowIndex = weeks.Length + 2,
                 SheetId = configuration.SheetId
             )
-        createBorderRequest (range, Borders.outer solidBorder)
+        createUpdateBorderRequest (range, Borders.outer solidBorder)
 
     let monthBorderRequests =
         calendar
@@ -387,7 +374,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                     EndRowIndex = startWeekNumber + weekCount + 1,
                     SheetId = configuration.SheetId
                 )
-            createBorderRequest (range, Borders.outer solidBorder))
+            createUpdateBorderRequest (range, Borders.outer solidBorder))
 
     let dayOfWeeksBorderRequest =
         let range =
@@ -398,7 +385,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 EndRowIndex = weeks.Length + 2,
                 SheetId = configuration.SheetId
             )
-        createBorderRequest (range, Borders.outer solidBorder)
+        createUpdateBorderRequest (range, Borders.outer solidBorder)
 
     let monthTotalBorderRequest =
         let range =
@@ -409,15 +396,28 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 EndRowIndex = weeks.Length + 2,
                 SheetId = configuration.SheetId
             )
-        createBorderRequest (range, Borders.outer solidBorder)
+        createUpdateBorderRequest (range, Borders.outer solidBorder)
 
     let setBordersRequests =
         [
-            outerBordersRequest
+            outerBorderRequest
             yield! monthBorderRequests
             dayOfWeeksBorderRequest
             monthTotalBorderRequest
         ]
+
+    let createSetBackgroundColorRequest gridRange color =
+        let updateCellFormatRequest = Request()
+        updateCellFormatRequest.RepeatCell <-
+            let cellFormat = CellFormat(BackgroundColor = color)
+            let cellData = CellData(UserEnteredFormat = cellFormat)
+            RepeatCellRequest(
+                Range = gridRange,
+                Cell = cellData,
+                Fields =
+                    $"{nameof (cellData.UserEnteredFormat)}.{nameof (cellFormat.BackgroundColor)}"
+            )
+        updateCellFormatRequest
 
     let setCellBackgroundColorRequests =
         [|
@@ -435,7 +435,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                     setSheetPropertiesRequest
                     yield! setDimensionLengthRequests
                     unmergeAllRequest
-                    yield! mergeRequests
+                    yield! mergeCellRequests
                     yield! setBordersRequests
                     yield! setCellBackgroundColorRequests
                 |]
