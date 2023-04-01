@@ -28,6 +28,18 @@ type Borders =
         Bottom: Border option
     }
 
+type DimensionRange =
+    {
+        StartIndex: int option
+        EndIndex: int option
+    }
+
+type TwoDimensionRange =
+    {
+        Columns: DimensionRange
+        Rows: DimensionRange
+    }
+
 [<CLIMutable>]
 type Configuration =
     {
@@ -75,6 +87,29 @@ module Calendar =
             ([], 0)
         |> List.map (fun (weeks, nextWeekStartNumber) ->
             (nextWeekStartNumber - weeks.Length, weeks.Length))
+
+module TwoDimensionRange =
+    let toGridRange sheetId (range: TwoDimensionRange) =
+        GridRange(
+            StartColumnIndex = (Option.toNullable range.Columns.StartIndex),
+            EndColumnIndex = (Option.toNullable range.Columns.EndIndex),
+            StartRowIndex = (Option.toNullable range.Rows.StartIndex),
+            EndRowIndex = (Option.toNullable range.Rows.EndIndex),
+            SheetId = sheetId
+        )
+
+    let toString (range: TwoDimensionRange) =
+        let indexToString =
+            function
+            | Some value -> string (value + 1)
+            | None -> String.Empty
+        let referenceToString (columnIndex, rowIndex) =
+            let columnIndexString = columnIndex |> indexToString
+            let rowIndexString = rowIndex |> indexToString
+            $"R{rowIndexString}C{columnIndexString}"
+        let startReference = referenceToString (range.Columns.StartIndex, range.Rows.StartIndex)
+        let endReference = referenceToString (range.Columns.EndIndex, range.Rows.EndIndex)
+        $"{startReference}:{endReference}"
 
 module Borders =
     let none =
