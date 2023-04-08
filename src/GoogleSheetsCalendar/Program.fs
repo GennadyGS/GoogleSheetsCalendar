@@ -88,26 +88,60 @@ module Calendar =
         |> List.map (fun (weeks, nextWeekStartNumber) ->
             (nextWeekStartNumber - weeks.Length, weeks.Length))
 
+module DimensionRange =
+    let all = { StartIndex = None; EndIndex = None }
+
+    let startingFrom index =
+        {
+            StartIndex = Some index
+            EndIndex = None
+        }
+
+    let endingWith index =
+        {
+            StartIndex = None
+            EndIndex = Some index
+        }
+
+    let single index =
+        {
+            StartIndex = Some index
+            EndIndex = Some index
+        }
+
+    let fromTo (startIndex, endIndex) =
+        {
+            StartIndex = Some startIndex
+            EndIndex = Some endIndex
+        }
+
 module TwoDimensionRange =
     let toGridRange sheetId (range: TwoDimensionRange) =
+        let mapStartIndex index = index |> Option.toNullable
+        let mapEndIndex index = index |> Option.map ((+) 1) |> Option.toNullable
         GridRange(
-            StartColumnIndex = (Option.toNullable range.Columns.StartIndex),
-            EndColumnIndex = (Option.toNullable range.Columns.EndIndex),
-            StartRowIndex = (Option.toNullable range.Rows.StartIndex),
-            EndRowIndex = (Option.toNullable range.Rows.EndIndex),
+            StartColumnIndex = (mapStartIndex range.Columns.EndIndex),
+            EndColumnIndex = (mapEndIndex range.Columns.EndIndex),
+            StartRowIndex = (mapStartIndex range.Rows.StartIndex),
+            EndRowIndex = (mapEndIndex range.Columns.EndIndex),
             SheetId = sheetId
         )
 
     let toString (range: TwoDimensionRange) =
-        let indexToString =
-            function
-            | Some value -> string (value + 1)
+        let indexToString dimensionTag index =
+            match index with
+            | Some value -> dimensionTag + string (value + 1)
             | None -> String.Empty
         let referenceToString (columnIndex, rowIndex) =
-            let columnIndexString = columnIndex |> indexToString
-            let rowIndexString = rowIndex |> indexToString
-            $"R{rowIndexString}C{columnIndexString}"
-        let startReference = referenceToString (range.Columns.StartIndex, range.Rows.StartIndex)
+            let columnIndexString = columnIndex |> indexToString "C"
+            let rowIndexString = rowIndex |> indexToString "R"
+            rowIndexString + columnIndexString
+        let startReference =
+            let makeExplicit index = index |> Option.defaultValue 0 |> Some
+            referenceToString (
+                range.Columns.StartIndex |> makeExplicit,
+                range.Rows.StartIndex |> makeExplicit
+            )
         let endReference = referenceToString (range.Columns.EndIndex, range.Rows.EndIndex)
         $"{startReference}:{endReference}"
 
@@ -224,7 +258,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             )
         let updateData =
             [|
-                ValueRange(Range = range, Values = valueArray)
+                ValueRange(Range = TwoDimensionRange.toString range, Values = valueArray)
             |]
 
         let valueUpdateRequestBody =
@@ -238,6 +272,11 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         |> ignore
 
     let updateValues () =
+        let range =
+            {
+                Rows = DimensionRange.single 0
+                Columns = DimensionRange.all
+            }
         let dayOfWeekNames =
             Enum.GetValues<DayOfWeek>()
             |> Array.map (DayOfWeek.addDays (int configuration.FirstDayOfWeek))
@@ -252,17 +291,27 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             "Month Total"
         ]
         |> List.singleton
-        |> updateValuesInRange "R1C1:R1"
+        |> updateValuesInRange range
 
+        let range =
+            {
+                Rows = DimensionRange.startingFrom 1
+                Columns = DimensionRange.fromTo (0, 1)
+            }
         let dateValues =
             [
                 for week in weeks -> [ week.StartDate; week.EndDate ]
             ]
-        updateValuesInRange "R2C1:C2" dateValues
+        updateValuesInRange range dateValues
 
         let weekSumFormula = @"=SUM(INDIRECT(""R[0]C[-7]:R[0]C[-1]"", FALSE))"
         let weekSumFormulaValues = List.replicate weeks.Length [ weekSumFormula ]
-        updateValuesInRange "R2C10:C10" weekSumFormulaValues
+        let range =
+            {
+                Rows = DimensionRange.startingFrom 1
+                Columns = DimensionRange.single 9
+            }
+        updateValuesInRange range weekSumFormulaValues
 
         let monthSumFormulaValues =
             calendar
@@ -272,7 +321,12 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 |> List.singleton
                 |> List.replicate weekCount)
 
-        updateValuesInRange "R2C11:C11" monthSumFormulaValues
+        let range =
+            {
+                Rows = DimensionRange.startingFrom 1
+                Columns = DimensionRange.single 10
+            }
+        updateValuesInRange range monthSumFormulaValues
 
         let dayOfweekSumFormula =
             $"=SUM(INDIRECT(\"R2C[0]:R{weeks.Length + 1}C[0]\", FALSE))"
@@ -280,7 +334,12 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             [
                 List.replicate (DaysPerWeek + 2) dayOfweekSumFormula
             ]
-        updateValuesInRange $"R{weeks.Length + 2}C3:C12" dayOfWeekSumFormulaValues
+        let range =
+            {
+                Rows = DimensionRange.single (weeks.Length + 1)
+                Columns = DimensionRange.fromTo (2, 10)
+            }
+        updateValuesInRange range dayOfWeekSumFormulaValues
 
     updateValues ()
 
