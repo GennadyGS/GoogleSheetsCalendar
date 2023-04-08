@@ -215,10 +215,21 @@ module CalendarCalculator =
         |> List.map (calculateMonth firstDayOfWeeek year)
         |> Calendar
 
-module SheetFormula =
-    let sum range =
+module SheetExpression =
+    let rangeReference range =
         let rangeString = TwoDimensionRange.toString range
-        $"=SUM(INDIRECT(\"{rangeString}\", FALSE))"
+        $"INDIRECT(\"{rangeString}\", FALSE)"
+
+    let sum (expression: string) = $"SUM({expression})"
+
+module SheetFormula =
+    let fromExpression (expression: string) = $"={expression}"
+    
+    let sumofRange range =
+        range
+        |> SheetExpression.rangeReference
+        |> SheetExpression.sum
+        |> fromExpression
 
 let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let weeks = Calendar.getWeeks calendar
@@ -313,7 +324,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                     Rows = Range.single (weekNumber + 1)
                     Columns = Range.fromTo (2, 8)
                 }
-                |> SheetFormula.sum
+                |> SheetFormula.sumofRange
                 |> List.singleton)
         let range =
             {
@@ -330,7 +341,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                     Rows = Range.fromTo (startWeekNumber + 1, startWeekNumber + weekCount)
                     Columns = Range.fromTo (2, 8)
                 }
-                |> SheetFormula.sum
+                |> SheetFormula.sumofRange
                 |> List.singleton
                 |> List.replicate weekCount)
 
@@ -354,7 +365,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                     Rows = Range.fromTo (1, weeks.Length)
                     Columns = Range.single column
                 }
-                |> SheetFormula.sum)
+                |> SheetFormula.sumofRange)
             |> List.singleton
         let range =
             {
