@@ -85,6 +85,13 @@ module Calendar =
             (nextWeekStartNumber - weeks.Length, weeks.Length))
 
 module Range =
+    let getStartIndexValue range =
+        range.StartIndex |> Option.defaultValue 0
+
+    let getEndIndexValue range =
+        range.EndIndex
+        |> Option.defaultWith (fun _ -> failwith "End index is not defined.")
+
     let all = { StartIndex = None; EndIndex = None }
 
     let startingFrom index =
@@ -99,17 +106,45 @@ module Range =
             EndIndex = Some index
         }
 
-    let single index =
-        {
-            StartIndex = Some index
-            EndIndex = Some index
-        }
-
-    let fromTo (startIndex, endIndex) =
+    let fromBounds (startIndex, endIndex) =
         {
             StartIndex = Some startIndex
             EndIndex = Some endIndex
         }
+
+    let single index = fromBounds (index, index)
+
+    let fromStartAndCount (startIndex, count) =
+        fromBounds (startIndex, startIndex + count - 1)
+
+    let nextRangeWithCount count range =
+        let endIndexValue = getEndIndexValue range
+        fromBounds (endIndexValue + 1, endIndexValue + count)
+
+    let nextSingleRange range = nextRangeWithCount 1 range
+
+    let subrangeWithBounds (startIndex, endIndex) range =
+        let startIndexValue = getStartIndexValue range
+        fromBounds (startIndexValue + startIndex, startIndexValue + endIndex)
+
+    let subrangeWithStartAndCount (startIndex, count) range =
+        subrangeWithBounds (startIndex, startIndex + count - 1) range
+
+    let singleSubrange index range = subrangeWithBounds (index, index) range
+
+    let union (range1, range2) =
+        let range1EndIndexValue = getEndIndexValue range1
+        let range2StartIndexValue = getStartIndexValue range2
+        if (range2StartIndexValue - range1EndIndexValue <> 1) then
+            failwith "Ranges should be adjacent."
+        {
+            StartIndex = range1.StartIndex
+            EndIndex = range2.EndIndex
+        }
+
+    let unionAll ranges =
+        ranges
+        |> List.reduce (fun range1 range2 -> union (range1, range2))
 
 module TwoDimensionRange =
     let toGridRange sheetId (range: TwoDimensionRange) =
@@ -224,7 +259,7 @@ module SheetExpression =
 
 module SheetFormula =
     let fromExpression (expression: string) = $"={expression}"
-    
+
     let sumofRange range =
         range
         |> SheetExpression.rangeReference
@@ -284,10 +319,30 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             .Execute()
         |> ignore
 
+    let headerRowRange = Range.single 0
+    let weeksRowRange =
+        headerRowRange
+        |> Range.nextRangeWithCount weeks.Length
+    let totalRowRange = weeksRowRange |> Range.nextSingleRange
+
+    let headerColumnRange = Range.fromStartAndCount (0, 2)
+    let daysOfWeekColumnRange =
+        headerColumnRange
+        |> Range.nextRangeWithCount DaysPerWeek
+    let weekTotalColumnRange = daysOfWeekColumnRange |> Range.nextSingleRange
+    let monthTotalColumnRange = weekTotalColumnRange |> Range.nextSingleRange
+    let dataColumnRange =
+        Range.unionAll
+            [
+                daysOfWeekColumnRange
+                weekTotalColumnRange
+                monthTotalColumnRange
+            ]
+
     let updateValues () =
         let range =
             {
-                Rows = Range.single 0
+                Rows = headerRowRange
                 Columns = Range.all
             }
         let dayOfWeekNames =
@@ -308,8 +363,8 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
         let range =
             {
-                Rows = Range.startingFrom 1
-                Columns = Range.fromTo (0, 1)
+                Rows = weeksRowRange
+                Columns = headerColumnRange
             }
         let dateValues =
             [
@@ -321,15 +376,15 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             [ 0 .. weeks.Length - 1 ]
             |> List.map (fun weekNumber ->
                 {
-                    Rows = Range.single (weekNumber + 1)
-                    Columns = Range.fromTo (2, 8)
+                    Rows = weeksRowRange |> Range.singleSubrange weekNumber
+                    Columns = daysOfWeekColumnRange
                 }
                 |> SheetFormula.sumofRange
                 |> List.singleton)
         let range =
             {
-                Rows = Range.startingFrom 1
-                Columns = Range.single 9
+                Rows = weeksRowRange
+                Columns = weekTotalColumnRange
             }
         updateValuesInRange range weekSumFormulaValues
 
@@ -338,8 +393,10 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             |> Calendar.getWeekNumberRanges
             |> List.collect (fun (startWeekNumber, weekCount) ->
                 {
-                    Rows = Range.fromTo (startWeekNumber + 1, startWeekNumber + weekCount)
-                    Columns = Range.fromTo (2, 8)
+                    Rows =
+                        weeksRowRange
+                        |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
+                    Columns = daysOfWeekColumnRange
                 }
                 |> SheetFormula.sumofRange
                 |> List.singleton
@@ -347,30 +404,24 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
         let range =
             {
-                Rows = Range.startingFrom 1
-                Columns = Range.single 10
+                Rows = weeksRowRange
+                Columns = monthTotalColumnRange
             }
         updateValuesInRange range monthSumFormulaValues
-
-        let range =
-            {
-                Rows = Range.fromTo (1, weeks.Length)
-                Columns = Range.single 10
-            }
 
         let dayOfWeekSumFormulaValues =
             [ 2 .. DaysPerWeek + 3 ]
             |> List.map (fun column ->
                 {
-                    Rows = Range.fromTo (1, weeks.Length)
+                    Rows = weeksRowRange
                     Columns = Range.single column
                 }
                 |> SheetFormula.sumofRange)
             |> List.singleton
         let range =
             {
-                Rows = Range.single (weeks.Length + 1)
-                Columns = Range.fromTo (2, 10)
+                Rows = totalRowRange
+                Columns = dataColumnRange
             }
         updateValuesInRange range dayOfWeekSumFormulaValues
 
