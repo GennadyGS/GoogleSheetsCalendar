@@ -28,7 +28,7 @@ type Borders =
         Bottom: Border option
     }
 
-type DimensionRange =
+type Range =
     {
         StartIndex: int option
         EndIndex: int option
@@ -36,8 +36,8 @@ type DimensionRange =
 
 type TwoDimensionRange =
     {
-        Columns: DimensionRange
-        Rows: DimensionRange
+        Columns: Range
+        Rows: Range
     }
 
 [<CLIMutable>]
@@ -88,7 +88,7 @@ module Calendar =
         |> List.map (fun (weeks, nextWeekStartNumber) ->
             (nextWeekStartNumber - weeks.Length, weeks.Length))
 
-module DimensionRange =
+module Range =
     let all = { StartIndex = None; EndIndex = None }
 
     let startingFrom index =
@@ -274,8 +274,8 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let updateValues () =
         let range =
             {
-                Rows = DimensionRange.single 0
-                Columns = DimensionRange.all
+                Rows = Range.single 0
+                Columns = Range.all
             }
         let dayOfWeekNames =
             Enum.GetValues<DayOfWeek>()
@@ -295,8 +295,8 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
         let range =
             {
-                Rows = DimensionRange.startingFrom 1
-                Columns = DimensionRange.fromTo (0, 1)
+                Rows = Range.startingFrom 1
+                Columns = Range.fromTo (0, 1)
             }
         let dateValues =
             [
@@ -308,8 +308,8 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         let weekSumFormulaValues = List.replicate weeks.Length [ weekSumFormula ]
         let range =
             {
-                Rows = DimensionRange.startingFrom 1
-                Columns = DimensionRange.single 9
+                Rows = Range.startingFrom 1
+                Columns = Range.single 9
             }
         updateValuesInRange range weekSumFormulaValues
 
@@ -323,8 +323,8 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
         let range =
             {
-                Rows = DimensionRange.startingFrom 1
-                Columns = DimensionRange.single 10
+                Rows = Range.startingFrom 1
+                Columns = Range.single 10
             }
         updateValuesInRange range monthSumFormulaValues
 
@@ -336,8 +336,8 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             ]
         let range =
             {
-                Rows = DimensionRange.single (weeks.Length + 1)
-                Columns = DimensionRange.fromTo (2, 10)
+                Rows = Range.single (weeks.Length + 1)
+                Columns = Range.fromTo (2, 10)
             }
         updateValuesInRange range dayOfWeekSumFormulaValues
 
