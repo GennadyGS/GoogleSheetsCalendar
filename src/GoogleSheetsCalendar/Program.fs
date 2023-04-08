@@ -215,6 +215,11 @@ module CalendarCalculator =
         |> List.map (calculateMonth firstDayOfWeeek year)
         |> Calendar
 
+module SheetFormula =
+    let sum range =
+        let rangeString = TwoDimensionRange.toString range
+        $"=SUM(INDIRECT(\"{rangeString}\", FALSE))"
+
 let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let weeks = Calendar.getWeeks calendar
     let spreadsheetId = configuration.SpreadsheetId
@@ -304,13 +309,12 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         let weekSumFormulaValues =
             [ 0 .. weeks.Length - 1 ]
             |> List.map (fun weekNumber ->
-                let range =
-                    {
-                        Rows = Range.single (weekNumber + 1)
-                        Columns = Range.fromTo (2, 8)
-                    }
-                let rangeString = TwoDimensionRange.toString range
-                List.singleton $"=SUM(INDIRECT(\"{rangeString}\", FALSE))")
+                {
+                    Rows = Range.single (weekNumber + 1)
+                    Columns = Range.fromTo (2, 8)
+                }
+                |> SheetFormula.sum
+                |> List.singleton)
         let range =
             {
                 Rows = Range.startingFrom 1
@@ -322,13 +326,11 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             calendar
             |> Calendar.getWeekNumberRanges
             |> List.collect (fun (startWeekNumber, weekCount) ->
-                let range =
-                    {
-                        Rows = Range.fromTo (startWeekNumber + 1, startWeekNumber + weekCount)
-                        Columns = Range.fromTo (2, 8)
-                    }
-                let rangeString = TwoDimensionRange.toString range
-                $"=SUM(INDIRECT(\"{rangeString}\", FALSE))"
+                {
+                    Rows = Range.fromTo (startWeekNumber + 1, startWeekNumber + weekCount)
+                    Columns = Range.fromTo (2, 8)
+                }
+                |> SheetFormula.sum
                 |> List.singleton
                 |> List.replicate weekCount)
 
@@ -348,13 +350,11 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         let dayOfWeekSumFormulaValues =
             [ 2 .. DaysPerWeek + 3 ]
             |> List.map (fun column ->
-                let range =
-                    {
-                        Rows = Range.fromTo (1, weeks.Length)
-                        Columns = Range.single column
-                    }
-                let rangeString = TwoDimensionRange.toString range
-                $"=SUM(INDIRECT(\"{rangeString}\", FALSE))")
+                {
+                    Rows = Range.fromTo (1, weeks.Length)
+                    Columns = Range.single column
+                }
+                |> SheetFormula.sum)
             |> List.singleton
         let range =
             {
