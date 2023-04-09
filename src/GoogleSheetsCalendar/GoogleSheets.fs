@@ -6,6 +6,7 @@ open Google.Apis.Auth.OAuth2
 open Google.Apis.Services
 open Google.Apis.Sheets.v4
 open Google.Apis.Sheets.v4.Data
+open System.Collections.Generic
 
 type Range =
     {
@@ -181,12 +182,41 @@ module SheetsService =
 
         new SheetsService(initializer)
 
-    let batchUpdate (sheetsService: SheetsService) spreadsheetId (requests: Request list) =
-        let updateRequestBody =
+    let batchUpdate (sheetsService: SheetsService) spreadsheetId requests =
+        let requestBody =
             BatchUpdateSpreadsheetRequest(Requests = (requests |> List.toArray))
 
         sheetsService
             .Spreadsheets
-            .BatchUpdate(updateRequestBody, spreadsheetId)
+            .BatchUpdate(requestBody, spreadsheetId)
             .Execute()
         |> ignore
+
+    let batchUpdateValuesInRange (sheetsService: SheetsService) spreadsheetId rangesAndValues =
+        let convertValues values =
+            values
+            |> List.toArray
+            |> Array.map (
+                List.toArray
+                >> Array.map box
+                >> (fun array -> array :> IList<obj>)
+            )
+
+        let valueRanges =
+            rangesAndValues
+            |> List.map (fun (range, values) ->
+                ValueRange(Range = TwoDimensionRange.toString range, Values = convertValues values))
+            |> List.toArray
+
+        let valueUpdateRequestBody =
+            BatchUpdateValuesRequest(ValueInputOption = "USER_ENTERED", Data = valueRanges)
+
+        sheetsService
+            .Spreadsheets
+            .Values
+            .BatchUpdate(valueUpdateRequestBody, spreadsheetId)
+            .Execute()
+        |> ignore
+
+    let updateValuesInRange (sheetsService: SheetsService) spreadsheetId range values =
+        batchUpdateValuesInRange sheetsService spreadsheetId [ (range, values) ]

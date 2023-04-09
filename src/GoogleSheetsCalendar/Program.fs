@@ -64,30 +64,6 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
     clearFormatting ()
 
-    let updateValuesInRange range values =
-        let valueArray =
-            values
-            |> List.toArray
-            |> Array.map (
-                List.toArray
-                >> Array.map box
-                >> (fun array -> array :> IList<obj>)
-            )
-        let updateData =
-            [|
-                ValueRange(Range = TwoDimensionRange.toString range, Values = valueArray)
-            |]
-
-        let valueUpdateRequestBody =
-            BatchUpdateValuesRequest(ValueInputOption = "USER_ENTERED", Data = updateData)
-
-        sheetsService
-            .Spreadsheets
-            .Values
-            .BatchUpdate(valueUpdateRequestBody, spreadsheetId)
-            .Execute()
-        |> ignore
-
     let headerRowRange = Range.single 0
     let weeksRowRange =
         headerRowRange
@@ -129,7 +105,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             "Month Total"
         ]
         |> List.singleton
-        |> updateValuesInRange range
+        |> SheetsService.updateValuesInRange sheetsService spreadsheetId range
 
         let range =
             {
@@ -141,7 +117,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             [
                 for week in weeks -> [ week.StartDate; week.EndDate ]
             ]
-        updateValuesInRange range dateValues
+        SheetsService.updateValuesInRange sheetsService spreadsheetId range dateValues
 
         let weekSumFormulaValues =
             [ 0 .. weeks.Length - 1 ]
@@ -159,7 +135,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 Rows = weeksRowRange
                 Columns = weekTotalColumnRange
             }
-        updateValuesInRange range weekSumFormulaValues
+        SheetsService.updateValuesInRange sheetsService spreadsheetId range weekSumFormulaValues
 
         let monthSumFormulaValues =
             calendar
@@ -182,7 +158,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 Rows = weeksRowRange
                 Columns = monthTotalColumnRange
             }
-        updateValuesInRange range monthSumFormulaValues
+        SheetsService.updateValuesInRange sheetsService spreadsheetId range monthSumFormulaValues
 
         let dayOfWeekSumFormulaValues =
             [ 2 .. DaysPerWeek + 3 ]
@@ -200,7 +176,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 Rows = totalRowRange
                 Columns = dataColumnRange
             }
-        updateValuesInRange range dayOfWeekSumFormulaValues
+        SheetsService.updateValuesInRange sheetsService spreadsheetId range dayOfWeekSumFormulaValues
 
     updateValues ()
 
