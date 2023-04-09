@@ -49,7 +49,7 @@ module Range =
         range.EndIndex
         |> Option.defaultWith (fun _ -> failwith "End index is not defined.")
 
-    let all = { StartIndex = None; EndIndex = None }
+    let unbounded = { StartIndex = None; EndIndex = None }
 
     let startingFrom index =
         {

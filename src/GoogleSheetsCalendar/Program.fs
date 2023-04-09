@@ -59,8 +59,8 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
         let clearFormattingRequest =
             {
-                Rows = Range.all
-                Columns = Range.all
+                Rows = Range.unbounded
+                Columns = Range.unbounded
             }
             |> createClearFormattingRequest
 
@@ -123,7 +123,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         let range =
             {
                 Rows = headerRowRange
-                Columns = Range.all
+                Columns = Range.unbounded
             }
         let dayOfWeekNames =
             Enum.GetValues<DayOfWeek>()
