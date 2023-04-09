@@ -286,14 +286,12 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         ]
     SheetsService.batchUpdate sheetsService spreadsheetId requests
 
-let rootDirectoryPath = getRootDirectoryPath ()
+let sheetsService =
+    let credentialFileName = Path.Combine(getRootDirectoryPath (), CredentialFileName)
+    SheetsService.create credentialFileName
 
-let credentialFileName = Path.Combine(rootDirectoryPath, CredentialFileName)
+let configuration = createConfiguration (getRootDirectoryPath ())
 
-let sheetsService = SheetsService.create credentialFileName
-
-let configuration = createConfiguration rootDirectoryPath
-
-let calendar = Calendar.calculate configuration.FirstDayOfWeek configuration.Year
-
-renderCalendar sheetsService configuration calendar
+configuration.Year
+|> Calendar.calculate configuration.FirstDayOfWeek 
+|> renderCalendar sheetsService configuration
