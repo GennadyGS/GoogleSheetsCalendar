@@ -200,6 +200,52 @@ module SheetsRequests =
             )
         request
 
+    let createDeleteDimensionRequest dimensionRange =
+        let result = new Request()
+        result.DeleteDimension <- DeleteDimensionRequest(Range = dimensionRange)
+        result
+
+    let createAppendDimensionRequest (sheetId: int, dimension, length: int) =
+        let result = new Request()
+        result.AppendDimension <-
+            AppendDimensionRequest(SheetId = sheetId, Dimension = dimension, Length = length)
+        result
+
+    let createUnmergeCellsRequest gridRange =
+        let result = new Request()
+        result.UnmergeCells <- UnmergeCellsRequest(Range = gridRange)
+        result
+
+    let createMergeCellsRequest gridRange =
+        let result = new Request()
+        result.MergeCells <- MergeCellsRequest(MergeType = "MERGE_ALL", Range = gridRange)
+        result
+
+    let createUpdateBorderRequest (range, borders) =
+        let updateBordersRequest = new Request()
+        updateBordersRequest.UpdateBorders <-
+            UpdateBordersRequest(
+                Range = range,
+                Left = Option.defaultValue null borders.Left,
+                Right = Option.defaultValue null borders.Right,
+                Top = Option.defaultValue null borders.Top,
+                Bottom = Option.defaultValue null borders.Bottom
+            )
+        updateBordersRequest
+
+    let createSetBackgroundColorRequest gridRange color =
+        let updateCellFormatRequest = Request()
+        updateCellFormatRequest.RepeatCell <-
+            let cellFormat = CellFormat(BackgroundColor = color)
+            let cellData = CellData(UserEnteredFormat = cellFormat)
+            RepeatCellRequest(
+                Range = gridRange,
+                Cell = cellData,
+                Fields =
+                    $"{nameof (cellData.UserEnteredFormat)}.{nameof (cellFormat.BackgroundColor)}"
+            )
+        updateCellFormatRequest
+
 [<RequireQualifiedAccess>]
 module SheetsService =
     let create credentialFileName =

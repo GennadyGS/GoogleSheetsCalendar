@@ -188,23 +188,12 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let setSheetPropertiesRequest =
         SheetsRequests.createSetSheetPropertiesRequest (Some 1, Some 2)
 
-    let createDeleteDimensionRequest dimensionRange =
-        let result = new Request()
-        result.DeleteDimension <- DeleteDimensionRequest(Range = dimensionRange)
-        result
-
-    let createAppendDimensionRequest (sheetId: int, dimension, length: int) =
-        let result = new Request()
-        result.AppendDimension <-
-            AppendDimensionRequest(SheetId = sheetId, Dimension = dimension, Length = length)
-        result
-
     let createSetDimensionLengthRequests (sheetId, dimension, length) =
         [
-            createAppendDimensionRequest (sheetId, dimension, length)
+            SheetsRequests.createAppendDimensionRequest (sheetId, dimension, length)
             let deleteDimensionRange =
                 DimensionRange(Dimension = dimension, StartIndex = length)
-            createDeleteDimensionRequest deleteDimensionRange
+            SheetsRequests.createDeleteDimensionRequest deleteDimensionRange
         ]
 
     let setDimensionLengthRequests =
@@ -214,19 +203,9 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 createSetDimensionLengthRequests (configuration.SheetId, "ROWS", 2 + weeks.Length)
         ]
 
-    let createUnmergeCellsRequest gridRange =
-        let result = new Request()
-        result.UnmergeCells <- UnmergeCellsRequest(Range = gridRange)
-        result
-
     let unmergeAllRequest =
         GridRange(SheetId = configuration.SheetId)
-        |> createUnmergeCellsRequest
-
-    let createMergeCellsRequest gridRange =
-        let result = new Request()
-        result.MergeCells <- MergeCellsRequest(MergeType = "MERGE_ALL", Range = gridRange)
-        result
+        |> SheetsRequests.createUnmergeCellsRequest
 
     let mergeCellRequests =
         calendar
@@ -239,20 +218,8 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 StartColumnIndex = 10,
                 EndColumnIndex = 11
             )
-            |> createMergeCellsRequest)
+            |> SheetsRequests.createMergeCellsRequest)
         |> List.toArray
-
-    let createUpdateBorderRequest (range, borders) =
-        let updateBordersRequest = new Request()
-        updateBordersRequest.UpdateBorders <-
-            UpdateBordersRequest(
-                Range = range,
-                Left = Option.defaultValue null borders.Left,
-                Right = Option.defaultValue null borders.Right,
-                Top = Option.defaultValue null borders.Top,
-                Bottom = Option.defaultValue null borders.Bottom
-            )
-        updateBordersRequest
 
     let solidBorder = new Border(Style = "SOLID")
     let outerBorderRequest =
@@ -264,7 +231,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 EndRowIndex = weeks.Length + 2,
                 SheetId = configuration.SheetId
             )
-        createUpdateBorderRequest (range, Borders.outer solidBorder)
+        SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
 
     let monthBorderRequests =
         calendar
@@ -278,7 +245,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                     EndRowIndex = startWeekNumber + weekCount + 1,
                     SheetId = configuration.SheetId
                 )
-            createUpdateBorderRequest (range, Borders.outer solidBorder))
+            SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder))
 
     let dayOfWeeksBorderRequest =
         let range =
@@ -289,7 +256,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 EndRowIndex = weeks.Length + 2,
                 SheetId = configuration.SheetId
             )
-        createUpdateBorderRequest (range, Borders.outer solidBorder)
+        SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
 
     let monthTotalBorderRequest =
         let range =
@@ -300,7 +267,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 EndRowIndex = weeks.Length + 2,
                 SheetId = configuration.SheetId
             )
-        createUpdateBorderRequest (range, Borders.outer solidBorder)
+        SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
 
     let setBordersRequests =
         [
@@ -310,26 +277,13 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             monthTotalBorderRequest
         ]
 
-    let createSetBackgroundColorRequest gridRange color =
-        let updateCellFormatRequest = Request()
-        updateCellFormatRequest.RepeatCell <-
-            let cellFormat = CellFormat(BackgroundColor = color)
-            let cellData = CellData(UserEnteredFormat = cellFormat)
-            RepeatCellRequest(
-                Range = gridRange,
-                Cell = cellData,
-                Fields =
-                    $"{nameof (cellData.UserEnteredFormat)}.{nameof (cellFormat.BackgroundColor)}"
-            )
-        updateCellFormatRequest
-
     let setCellBackgroundColorRequests =
         [|
             for (weekNumber, week) in List.indexed weeks do
                 for dayOfWeekNumber in [ 0 .. DaysPerWeek - 1 ] do
                     if not week.DaysActive[dayOfWeekNumber] then
                         let range = createSingleCellRange (weekNumber + 1, dayOfWeekNumber + 2)
-                        createSetBackgroundColorRequest range greyColor
+                        SheetsRequests.createSetBackgroundColorRequest range greyColor
         |]
 
     let requests =
