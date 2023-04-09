@@ -105,7 +105,7 @@ module Range =
 
 [<RequireQualifiedAccess>]
 module TwoDimensionRange =
-    let toGridRange sheetId (range: TwoDimensionRange) =
+    let toGridRange (range: TwoDimensionRange) =
         let mapStartIndex index = index |> Option.toNullable
         let mapEndIndex index =
             index |> Option.map ((+) 1) |> Option.toNullable
@@ -113,9 +113,7 @@ module TwoDimensionRange =
             StartColumnIndex = (mapStartIndex range.Columns.EndIndex),
             EndColumnIndex = (mapEndIndex range.Columns.EndIndex),
             StartRowIndex = (mapStartIndex range.Rows.StartIndex),
-            EndRowIndex = (mapEndIndex range.Columns.EndIndex),
-            SheetId = sheetId
-        )
+            EndRowIndex = (mapEndIndex range.Columns.EndIndex))
 
     let toString (range: TwoDimensionRange) =
         let indexToString dimensionTag index =

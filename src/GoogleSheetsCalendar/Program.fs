@@ -48,17 +48,20 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let spreadsheetId = configuration.SpreadsheetId
 
     let clearFormatting () =
-        let createClearFormattingRequest sheetId =
+        let createClearFormattingRequest range =
             let request = Request()
             request.UpdateCells <-
                 UpdateCellsRequest(
-                    Range = GridRange(SheetId = (sheetId |> Option.toNullable)),
+                    Range = (TwoDimensionRange.toGridRange range),
                     Fields = nameof (Unchecked.defaultof<CellData>.UserEnteredFormat)
                 )
             request
 
         let clearFormattingRequest =
-            Some configuration.SheetId
+            {
+                Rows = Range.all
+                Columns = Range.all
+            }
             |> createClearFormattingRequest
 
         let updateRequestBody =
