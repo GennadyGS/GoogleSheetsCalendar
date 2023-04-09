@@ -183,7 +183,6 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             EndRowIndex = Nullable(rowIndex + 1),
             SheetId = configuration.SheetId
         )
-    let greyColor = Color(Red = 0.75f, Green = 0.75f, Blue = 0.75f)
 
     let setSheetPropertiesRequest =
         SheetsRequests.createSetSheetPropertiesRequest (Some 1, Some 2)
@@ -267,12 +266,13 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         ]
 
     let setCellBackgroundColorRequests =
+        let inactiveDayColor = Color(Red = 0.75f, Green = 0.75f, Blue = 0.75f)
         [|
             for (weekNumber, week) in List.indexed weeks do
                 for dayOfWeekNumber in [ 0 .. DaysPerWeek - 1 ] do
                     if not week.DaysActive[dayOfWeekNumber] then
                         let range = createSingleCellRange (weekNumber + 1, dayOfWeekNumber + 2)
-                        SheetsRequests.createSetBackgroundColorRequest range greyColor
+                        SheetsRequests.createSetBackgroundColorRequest range inactiveDayColor
         |]
 
     let requests =
