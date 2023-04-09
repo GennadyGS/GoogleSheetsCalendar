@@ -84,9 +84,7 @@ let createConfiguration rootDirectoryPath =
     nativeConfiguration.Get<Configuration>()
     |> NullCoalesce.coalesce (lazy raise (InvalidOperationException("Configuration is missing")))
 
-let createSheetsService rootDirectoryPath =
-    let credentialFileName = Path.Combine(rootDirectoryPath, credentialsFileName)
-
+let createSheetsService credentialFileName =
     if not (File.Exists(credentialFileName)) then
         raise (InvalidOperationException($"File {credentialsFileName} is missing"))
 
@@ -486,9 +484,11 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
 let rootDirectoryPath = getRootDirectoryPath ()
 
-let configuration = createConfiguration rootDirectoryPath
+let credentialFileName = Path.Combine(rootDirectoryPath, credentialsFileName)
 
-let sheetsService = createSheetsService rootDirectoryPath
+let sheetsService = createSheetsService credentialFileName
+
+let configuration = createConfiguration rootDirectoryPath
 
 let calendar =
     CalendarCalculator.calculate configuration.FirstDayOfWeek configuration.Year
