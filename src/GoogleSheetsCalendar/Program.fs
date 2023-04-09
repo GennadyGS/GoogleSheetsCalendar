@@ -176,7 +176,11 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 Rows = totalRowRange
                 Columns = dataColumnRange
             }
-        SheetsService.updateValuesInRange sheetsService spreadsheetId range dayOfWeekSumFormulaValues
+        SheetsService.updateValuesInRange
+            sheetsService
+            spreadsheetId
+            range
+            dayOfWeekSumFormulaValues
 
     updateValues ()
 
@@ -359,24 +363,16 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                         createSetBackgroundColorRequest range greyColor
         |]
 
-    let updateRequestBody =
-        BatchUpdateSpreadsheetRequest(
-            Requests =
-                [|
-                    setSheetPropertiesRequest
-                    yield! setDimensionLengthRequests
-                    unmergeAllRequest
-                    yield! mergeCellRequests
-                    yield! setBordersRequests
-                    yield! setCellBackgroundColorRequests
-                |]
-        )
-
-    sheetsService
-        .Spreadsheets
-        .BatchUpdate(updateRequestBody, spreadsheetId)
-        .Execute()
-    |> ignore
+    let requests =
+        [
+            setSheetPropertiesRequest
+            yield! setDimensionLengthRequests
+            unmergeAllRequest
+            yield! mergeCellRequests
+            yield! setBordersRequests
+            yield! setCellBackgroundColorRequests
+        ]
+    SheetsService.batchUpdate sheetsService spreadsheetId requests
 
 let rootDirectoryPath = getRootDirectoryPath ()
 
