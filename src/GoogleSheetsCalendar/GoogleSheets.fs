@@ -167,6 +167,40 @@ module SheetFormula =
         |> fromExpression
 
 [<RequireQualifiedAccess>]
+module SheetsRequests =
+    let createClearFormattingRequest range =
+        let request = Request()
+        request.UpdateCells <-
+            UpdateCellsRequest(
+                Range = (TwoDimensionRange.toGridRange range),
+                Fields = nameof (Unchecked.defaultof<CellData>.UserEnteredFormat)
+            )
+        request
+
+    let createSetSheetPropertiesRequest (frozenRowCount, frozenColumnCount) =
+        let request = new Request()
+        let sheetProperties =
+            SheetProperties(
+                GridProperties =
+                    GridProperties(
+                        FrozenRowCount = Option.toNullable frozenRowCount,
+                        FrozenColumnCount = Option.toNullable frozenColumnCount
+                    )
+            )
+
+        request.UpdateSheetProperties <-
+            UpdateSheetPropertiesRequest(
+                Properties = sheetProperties,
+                Fields =
+                    ([
+                        $"{nameof (sheetProperties.GridProperties)}.{nameof (sheetProperties.GridProperties.FrozenRowCount)}"
+                        $"{nameof (sheetProperties.GridProperties)}.{nameof (sheetProperties.GridProperties.FrozenColumnCount)}"
+                     ]
+                     |> String.concat ",")
+            )
+        request
+
+[<RequireQualifiedAccess>]
 module SheetsService =
     let create credentialFileName =
         if not (File.Exists(credentialFileName)) then

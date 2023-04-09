@@ -48,17 +48,8 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let spreadsheetId = configuration.SpreadsheetId
 
     let clearFormatting () =
-        let createClearFormattingRequest range =
-            let request = Request()
-            request.UpdateCells <-
-                UpdateCellsRequest(
-                    Range = (TwoDimensionRange.toGridRange range),
-                    Fields = nameof (Unchecked.defaultof<CellData>.UserEnteredFormat)
-                )
-            request
-
         let range = TwoDimensionRange.unbounded (Some configuration.SheetId)
-        let clearFormattingRequest = createClearFormattingRequest range
+        let clearFormattingRequest = SheetsRequests.createClearFormattingRequest range
 
         SheetsService.batchUpdate sheetsService spreadsheetId [ clearFormattingRequest ]
 
@@ -194,30 +185,8 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         )
     let greyColor = Color(Red = 0.75f, Green = 0.75f, Blue = 0.75f)
 
-    let createSetSheetPropertiesRequest (frozenRowCount, frozenColumnCount) =
-        let request = new Request()
-        let sheetProperties =
-            SheetProperties(
-                GridProperties =
-                    GridProperties(
-                        FrozenRowCount = Option.toNullable frozenRowCount,
-                        FrozenColumnCount = Option.toNullable frozenColumnCount
-                    )
-            )
-
-        request.UpdateSheetProperties <-
-            UpdateSheetPropertiesRequest(
-                Properties = sheetProperties,
-                Fields =
-                    ([
-                        $"{nameof (sheetProperties.GridProperties)}.{nameof (sheetProperties.GridProperties.FrozenRowCount)}"
-                        $"{nameof (sheetProperties.GridProperties)}.{nameof (sheetProperties.GridProperties.FrozenColumnCount)}"
-                     ]
-                     |> String.concat ",")
-            )
-        request
-
-    let setSheetPropertiesRequest = createSetSheetPropertiesRequest (Some 1, Some 2)
+    let setSheetPropertiesRequest =
+        SheetsRequests.createSetSheetPropertiesRequest (Some 1, Some 2)
 
     let createDeleteDimensionRequest dimensionRange =
         let result = new Request()
