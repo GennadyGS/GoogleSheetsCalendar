@@ -57,21 +57,10 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 )
             request
 
-        let clearFormattingRequest =
-            {
-                Rows = Range.unbounded
-                Columns = Range.unbounded
-            }
-            |> createClearFormattingRequest
+        let range = TwoDimensionRange.unbounded (Some configuration.SheetId)
+        let clearFormattingRequest = createClearFormattingRequest range
 
-        let updateRequestBody =
-            BatchUpdateSpreadsheetRequest(Requests = [| clearFormattingRequest |])
-
-        sheetsService
-            .Spreadsheets
-            .BatchUpdate(updateRequestBody, spreadsheetId)
-            .Execute()
-        |> ignore
+        SheetsService.batchUpdate sheetsService spreadsheetId [ clearFormattingRequest ]
 
     clearFormatting ()
 
@@ -122,6 +111,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let updateValues () =
         let range =
             {
+                SheetId = Some configuration.SheetId
                 Rows = headerRowRange
                 Columns = Range.unbounded
             }
@@ -143,6 +133,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
         let range =
             {
+                SheetId = Some configuration.SheetId
                 Rows = weeksRowRange
                 Columns = headerColumnRange
             }
@@ -156,6 +147,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             [ 0 .. weeks.Length - 1 ]
             |> List.map (fun weekNumber ->
                 {
+                    SheetId = Some configuration.SheetId
                     Rows = weeksRowRange |> Range.singleSubrange weekNumber
                     Columns = daysOfWeekColumnRange
                 }
@@ -163,6 +155,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
                 |> List.singleton)
         let range =
             {
+                SheetId = Some configuration.SheetId
                 Rows = weeksRowRange
                 Columns = weekTotalColumnRange
             }
@@ -173,6 +166,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             |> Calendar.getWeekNumberRanges
             |> List.collect (fun (startWeekNumber, weekCount) ->
                 {
+                    SheetId = Some configuration.SheetId
                     Rows =
                         weeksRowRange
                         |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
@@ -184,6 +178,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
         let range =
             {
+                SheetId = Some configuration.SheetId
                 Rows = weeksRowRange
                 Columns = monthTotalColumnRange
             }
@@ -193,6 +188,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             [ 2 .. DaysPerWeek + 3 ]
             |> List.map (fun column ->
                 {
+                    SheetId = Some configuration.SheetId
                     Rows = weeksRowRange
                     Columns = Range.single column
                 }
@@ -200,6 +196,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             |> List.singleton
         let range =
             {
+                SheetId = Some configuration.SheetId
                 Rows = totalRowRange
                 Columns = dataColumnRange
             }

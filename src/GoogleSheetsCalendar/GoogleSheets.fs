@@ -1,11 +1,11 @@
 ﻿module GoogleSheets
 
 open System
-open Google.Apis.Sheets.v4.Data
 open System.IO
 open Google.Apis.Auth.OAuth2
 open Google.Apis.Services
 open Google.Apis.Sheets.v4
+open Google.Apis.Sheets.v4.Data
 
 type Range =
     {
@@ -13,7 +13,12 @@ type Range =
         EndIndex: int option
     }
 
-type TwoDimensionRange = { Columns: Range; Rows: Range }
+type TwoDimensionRange =
+    {
+        Columns: Range
+        Rows: Range
+        SheetId: int option
+    }
 
 type Borders =
     {
@@ -105,6 +110,13 @@ module Range =
 
 [<RequireQualifiedAccess>]
 module TwoDimensionRange =
+    let unbounded sheetId =
+        {
+            Rows = Range.unbounded
+            Columns = Range.unbounded
+            SheetId = sheetId
+        }
+
     let toGridRange (range: TwoDimensionRange) =
         let mapStartIndex index = index |> Option.toNullable
         let mapEndIndex index =
@@ -113,7 +125,9 @@ module TwoDimensionRange =
             StartColumnIndex = (mapStartIndex range.Columns.EndIndex),
             EndColumnIndex = (mapEndIndex range.Columns.EndIndex),
             StartRowIndex = (mapStartIndex range.Rows.StartIndex),
-            EndRowIndex = (mapEndIndex range.Columns.EndIndex))
+            EndRowIndex = (mapEndIndex range.Columns.EndIndex),
+            SheetId = (range.SheetId |> Option.toNullable)
+        )
 
     let toString (range: TwoDimensionRange) =
         let indexToString dimensionTag index =
@@ -166,3 +180,13 @@ module SheetsService =
             new BaseClientService.Initializer(HttpClientInitializer = credential)
 
         new SheetsService(initializer)
+
+    let batchUpdate (sheetsService: SheetsService) spreadsheetId (requests: Request list) =
+        let updateRequestBody =
+            BatchUpdateSpreadsheetRequest(Requests = (requests |> List.toArray))
+
+        sheetsService
+            .Spreadsheets
+            .BatchUpdate(updateRequestBody, spreadsheetId)
+            .Execute()
+        |> ignore
