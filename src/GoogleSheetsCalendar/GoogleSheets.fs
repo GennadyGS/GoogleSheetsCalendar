@@ -2,6 +2,10 @@
 
 open System
 open Google.Apis.Sheets.v4.Data
+open System.IO
+open Google.Apis.Auth.OAuth2
+open Google.Apis.Services
+open Google.Apis.Sheets.v4
 
 type Range =
     {
@@ -149,3 +153,18 @@ module SheetFormula =
         |> SheetExpression.sum
         |> fromExpression
 
+[<RequireQualifiedAccess>]
+module SheetsService =
+    let create credentialFileName =
+        if not (File.Exists(credentialFileName)) then
+            raise (InvalidOperationException($"File {credentialFileName} is missing"))
+
+        let credential =
+            GoogleCredential
+                .FromFile(credentialFileName)
+                .CreateScoped([| SheetsService.Scope.Spreadsheets |])
+
+        let initializer =
+            new BaseClientService.Initializer(HttpClientInitializer = credential)
+
+        new SheetsService(initializer)

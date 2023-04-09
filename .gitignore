@@ -349,5 +349,5 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 
-# Credentials file
-/src/GoogleSheetsCalendar/credentials.json
+# Credential file
+/src/GoogleSheetsCalendar/credential.json

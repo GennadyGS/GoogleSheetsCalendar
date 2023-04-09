@@ -4,8 +4,6 @@ open System.Collections.Generic
 open System.Globalization
 open System.Reflection
 open Microsoft.Extensions.Configuration
-open Google.Apis.Auth.OAuth2
-open Google.Apis.Services
 open Google.Apis.Sheets.v4
 open Google.Apis.Sheets.v4.Data
 open Calendar
@@ -21,7 +19,7 @@ type Configuration =
     }
 
 [<Literal>]
-let credentialsFileName = "credentials.json"
+let CredentialFileName = "credential.json"
 
 module NullCoalesce =
     let coalesce (b: 'a Lazy) (a: 'a) =
@@ -44,20 +42,6 @@ let createConfiguration rootDirectoryPath =
 
     nativeConfiguration.Get<Configuration>()
     |> NullCoalesce.coalesce (lazy raise (InvalidOperationException("Configuration is missing")))
-
-let createSheetsService credentialFileName =
-    if not (File.Exists(credentialFileName)) then
-        raise (InvalidOperationException($"File {credentialsFileName} is missing"))
-
-    let credential =
-        GoogleCredential
-            .FromFile(credentialFileName)
-            .CreateScoped([| SheetsService.Scope.Spreadsheets |])
-
-    let initializer =
-        new BaseClientService.Initializer(HttpClientInitializer = credential)
-
-    new SheetsService(initializer)
 
 let renderCalendar (sheetsService: SheetsService) configuration calendar =
     let weeks = Calendar.getWeeks calendar
@@ -420,9 +404,9 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
 let rootDirectoryPath = getRootDirectoryPath ()
 
-let credentialFileName = Path.Combine(rootDirectoryPath, credentialsFileName)
+let credentialFileName = Path.Combine(rootDirectoryPath, CredentialFileName)
 
-let sheetsService = createSheetsService credentialFileName
+let sheetsService = SheetsService.create credentialFileName
 
 let configuration = createConfiguration rootDirectoryPath
 

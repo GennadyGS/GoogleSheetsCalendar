@@ -10,7 +10,7 @@
     <Compile Include="Calendar.fs" />
     <Compile Include="GoogleSheets.fs" />
     <Compile Include="Program.fs" />
-    <Content Include="credentials.json">
+    <Content Include="credential.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="appsettings.json">
