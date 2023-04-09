@@ -1,6 +1,5 @@
 ﻿open System
 open System.IO
-open System.Collections.Generic
 open System.Globalization
 open System.Reflection
 open Microsoft.Extensions.Configuration
