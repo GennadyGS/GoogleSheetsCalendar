@@ -8,6 +8,7 @@ open Google.Apis.Auth.OAuth2
 open Google.Apis.Services
 open Google.Apis.Sheets.v4
 open Google.Apis.Sheets.v4.Data
+open GoogleSheets
 
 type Week =
     {
@@ -19,14 +20,6 @@ type Week =
 type Month = Month of Week list
 
 type Calendar = Calendar of Month list
-
-type Borders =
-    {
-        Left: Border option
-        Right: Border option
-        Top: Border option
-        Bottom: Border option
-    }
 
 type Range =
     {
@@ -176,23 +169,6 @@ module TwoDimensionRange =
             )
         let endReference = referenceToString (range.Columns.EndIndex, range.Rows.EndIndex)
         $"{startReference}:{endReference}"
-
-module Borders =
-    let none =
-        {
-            Left = None
-            Right = None
-            Top = None
-            Bottom = None
-        }
-
-    let outer border =
-        {
-            Left = Some border
-            Right = Some border
-            Top = Some border
-            Bottom = Some border
-        }
 
 let getRootDirectoryPath () =
     let executableFilePath = Assembly.GetExecutingAssembly().Location
