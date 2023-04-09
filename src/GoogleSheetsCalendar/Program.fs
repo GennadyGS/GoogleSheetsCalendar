@@ -223,14 +223,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
 
     let solidBorder = new Border(Style = "SOLID")
     let outerBorderRequest =
-        let range =
-            GridRange(
-                StartColumnIndex = Nullable 0,
-                EndColumnIndex = Nullable 11,
-                StartRowIndex = 0,
-                EndRowIndex = weeks.Length + 2,
-                SheetId = configuration.SheetId
-            )
+        let range = TwoDimensionRange.unbounded (Some configuration.SheetId)
         SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
 
     let monthBorderRequests =
@@ -238,35 +231,31 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         |> Calendar.getWeekNumberRanges
         |> List.map (fun (startWeekNumber, weekCount) ->
             let range =
-                GridRange(
-                    StartColumnIndex = Nullable 0,
-                    EndColumnIndex = Nullable 11,
-                    StartRowIndex = startWeekNumber + 1,
-                    EndRowIndex = startWeekNumber + weekCount + 1,
-                    SheetId = configuration.SheetId
-                )
+                {
+                    SheetId = Some configuration.SheetId
+                    Rows =
+                        weeksRowRange
+                        |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
+                    Columns = Range.unbounded
+                }
             SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder))
 
     let dayOfWeeksBorderRequest =
         let range =
-            GridRange(
-                StartColumnIndex = Nullable 2,
-                EndColumnIndex = Nullable(2 + DaysPerWeek),
-                StartRowIndex = 0,
-                EndRowIndex = weeks.Length + 2,
-                SheetId = configuration.SheetId
-            )
+            {
+                SheetId = Some configuration.SheetId
+                Rows = Range.unbounded
+                Columns = daysOfWeekColumnRange
+            }
         SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
 
-    let monthTotalBorderRequest =
+    let weekTotalBorderRequest =
         let range =
-            GridRange(
-                StartColumnIndex = Nullable(2 + DaysPerWeek),
-                EndColumnIndex = Nullable(3 + DaysPerWeek),
-                StartRowIndex = 0,
-                EndRowIndex = weeks.Length + 2,
-                SheetId = configuration.SheetId
-            )
+            {
+                SheetId = Some configuration.SheetId
+                Rows = Range.unbounded
+                Columns = weekTotalColumnRange
+            }
         SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
 
     let setBordersRequests =
@@ -274,7 +263,7 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
             outerBorderRequest
             yield! monthBorderRequests
             dayOfWeeksBorderRequest
-            monthTotalBorderRequest
+            weekTotalBorderRequest
         ]
 
     let setCellBackgroundColorRequests =

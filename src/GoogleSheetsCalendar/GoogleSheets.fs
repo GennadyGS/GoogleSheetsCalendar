@@ -229,7 +229,7 @@ module SheetsRequests =
         let updateBordersRequest = new Request()
         updateBordersRequest.UpdateBorders <-
             UpdateBordersRequest(
-                Range = range,
+                Range = (range |> TwoDimensionRange.toGridRange),
                 Left = Option.defaultValue null borders.Left,
                 Right = Option.defaultValue null borders.Right,
                 Top = Option.defaultValue null borders.Top,
