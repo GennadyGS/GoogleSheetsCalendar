@@ -126,7 +126,7 @@ module TwoDimensionRange =
             StartColumnIndex = (mapStartIndex range.Columns.EndIndex),
             EndColumnIndex = (mapEndIndex range.Columns.EndIndex),
             StartRowIndex = (mapStartIndex range.Rows.StartIndex),
-            EndRowIndex = (mapEndIndex range.Columns.EndIndex),
+            EndRowIndex = (mapEndIndex range.Rows.EndIndex),
             SheetId = (range.SheetId |> Option.toNullable)
         )
 
@@ -211,14 +211,18 @@ module SheetsRequests =
             AppendDimensionRequest(SheetId = sheetId, Dimension = dimension, Length = length)
         result
 
-    let createUnmergeCellsRequest gridRange =
+    let createUnmergeCellsRequest range =
         let result = new Request()
-        result.UnmergeCells <- UnmergeCellsRequest(Range = gridRange)
+        result.UnmergeCells <- UnmergeCellsRequest(Range = (TwoDimensionRange.toGridRange range))
         result
 
-    let createMergeCellsRequest gridRange =
+    let createMergeCellsRequest range =
         let result = new Request()
-        result.MergeCells <- MergeCellsRequest(MergeType = "MERGE_ALL", Range = gridRange)
+        result.MergeCells <-
+            MergeCellsRequest(
+                MergeType = "MERGE_ALL",
+                Range = (TwoDimensionRange.toGridRange range)
+            )
         result
 
     let createUpdateBorderRequest (range, borders) =

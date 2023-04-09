@@ -204,21 +204,21 @@ let renderCalendar (sheetsService: SheetsService) configuration calendar =
         ]
 
     let unmergeAllRequest =
-        GridRange(SheetId = configuration.SheetId)
+        TwoDimensionRange.unbounded (Some configuration.SheetId)
         |> SheetsRequests.createUnmergeCellsRequest
 
     let mergeCellRequests =
         calendar
         |> Calendar.getWeekNumberRanges
         |> List.map (fun (startWeekNumber, weekCount) ->
-            GridRange(
-                SheetId = configuration.SheetId,
-                StartRowIndex = startWeekNumber + 1,
-                EndRowIndex = startWeekNumber + 1 + weekCount,
-                StartColumnIndex = 10,
-                EndColumnIndex = 11
-            )
-            |> SheetsRequests.createMergeCellsRequest)
+            {
+                SheetId = Some configuration.SheetId
+                Rows =
+                    weeksRowRange
+                    |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
+                Columns = monthTotalColumnRange
+            })
+        |> List.map SheetsRequests.createMergeCellsRequest
         |> List.toArray
 
     let solidBorder = new Border(Style = "SOLID")

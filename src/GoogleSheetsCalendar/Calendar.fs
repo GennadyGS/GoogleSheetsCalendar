@@ -64,5 +64,6 @@ module Calendar =
             (fun (_, nextWeekStartNumber) (Month weeks) ->
                 (weeks, nextWeekStartNumber + weeks.Length))
             ([], 0)
+        |> List.tail
         |> List.map (fun (weeks, nextWeekStartNumber) ->
             (nextWeekStartNumber - weeks.Length, weeks.Length))
