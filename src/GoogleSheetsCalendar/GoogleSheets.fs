@@ -123,7 +123,7 @@ module TwoDimensionRange =
         let mapEndIndex index =
             index |> Option.map ((+) 1) |> Option.toNullable
         GridRange(
-            StartColumnIndex = (mapStartIndex range.Columns.EndIndex),
+            StartColumnIndex = (mapStartIndex range.Columns.StartIndex),
             EndColumnIndex = (mapEndIndex range.Columns.EndIndex),
             StartRowIndex = (mapStartIndex range.Rows.StartIndex),
             EndRowIndex = (mapEndIndex range.Rows.EndIndex),
@@ -280,25 +280,29 @@ module SheetsService =
         let convertValues values =
             values
             |> List.toArray
-            |> Array.map (
-                List.toArray
-                >> Array.map box
-                >> (fun array -> array :> IList<obj>)
-            )
+            |> Array.map (fun list -> list |> List.toArray |> Array.map box :> IList<_>)
 
         let valueRanges =
             rangesAndValues
             |> List.map (fun (range, values) ->
-                ValueRange(Range = TwoDimensionRange.toString range, Values = convertValues values))
+                let gridRange = range |> TwoDimensionRange.toGridRange
+                DataFilterValueRange(
+                    DataFilter = DataFilter(GridRange = gridRange),
+                    Values = convertValues values,
+                    MajorDimension = "ROWS"
+                ))
             |> List.toArray
 
         let valueUpdateRequestBody =
-            BatchUpdateValuesRequest(ValueInputOption = "USER_ENTERED", Data = valueRanges)
+            BatchUpdateValuesByDataFilterRequest(
+                ValueInputOption = "USER_ENTERED",
+                Data = valueRanges
+            )
 
         sheetsService
             .Spreadsheets
             .Values
-            .BatchUpdate(valueUpdateRequestBody, spreadsheetId)
+            .BatchUpdateByDataFilter(valueUpdateRequestBody, spreadsheetId)
             .Execute()
         |> ignore
 
