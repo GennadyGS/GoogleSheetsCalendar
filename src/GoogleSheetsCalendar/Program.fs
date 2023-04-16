@@ -1,10 +1,7 @@
 ﻿open System
 open System.IO
-open System.Globalization
 open System.Reflection
 open Microsoft.Extensions.Configuration
-open Google.Apis.Sheets.v4
-open Google.Apis.Sheets.v4.Data
 open Calendar
 open GoogleSheets
 

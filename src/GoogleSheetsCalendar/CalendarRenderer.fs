@@ -1,4 +1,4 @@
-﻿module CalendarRenderer
+﻿module internal CalendarRenderer
 
 open System
 open System.Globalization
