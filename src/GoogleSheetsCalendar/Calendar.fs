@@ -67,3 +67,8 @@ module Calendar =
         |> List.tail
         |> List.map (fun (weeks, nextWeekStartNumber) ->
             (nextWeekStartNumber - weeks.Length, weeks.Length))
+
+    let getFirstDayOfWeek calendar =
+        let firstFullWeek = calendar |> getWeeks |> List.find (fun week -> week.DaysActive[0])
+        firstFullWeek.StartDate.DayOfWeek
+

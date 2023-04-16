@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="Calendar.fs" />
     <Compile Include="GoogleSheets.fs" />
+    <Compile Include="CalendarRenderer.fs" />
     <Compile Include="Program.fs" />
     <Content Include="credential.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
