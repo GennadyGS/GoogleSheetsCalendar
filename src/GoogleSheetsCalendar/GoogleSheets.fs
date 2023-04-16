@@ -306,5 +306,5 @@ module SheetsService =
             .Execute()
         |> ignore
 
-    let updateValuesInRange (sheetsService: SheetsService) spreadsheetId range values =
+    let updateValuesInRange (sheetsService: SheetsService) spreadsheetId (range, values) =
         batchUpdateValuesInRange sheetsService spreadsheetId [ (range, values) ]
