@@ -24,6 +24,7 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
         headerRowRange
         |> Range.nextRangeWithCount weeks.Length
     let totalRowRange = weeksRowRange |> Range.nextSingleRange
+    let dataRowRange = Range.union (weeksRowRange, totalRowRange)
 
     let headerColumnRange = Range.fromStartAndCount (0, 2)
     let daysOfWeekColumnRange =
@@ -140,15 +141,6 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
 
     updateValues ()
 
-    let createSingleCellRange (rowIndex, columnIndex) =
-        GridRange(
-            StartColumnIndex = Nullable columnIndex,
-            EndColumnIndex = Nullable(columnIndex + 1),
-            StartRowIndex = Nullable rowIndex,
-            EndRowIndex = Nullable(rowIndex + 1),
-            SheetId = sheetId
-        )
-
     let setSheetPropertiesRequest =
         SheetsRequests.createSetSheetPropertiesRequest (Some 1, Some 2)
 
@@ -160,10 +152,12 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
             SheetsRequests.createDeleteDimensionRequest deleteDimensionRange
         ]
 
+    let columnCount = Range.getEndIndexValue dataColumnRange + 1
+    let rowCount = Range.getEndIndexValue dataRowRange + 1
     let setDimensionLengthRequests =
         [
-            yield! createSetDimensionLengthRequests (sheetId, "COLUMNS", 11)
-            yield! createSetDimensionLengthRequests (sheetId, "ROWS", 2 + weeks.Length)
+            yield! createSetDimensionLengthRequests (sheetId, "COLUMNS", columnCount)
+            yield! createSetDimensionLengthRequests (sheetId, "ROWS", rowCount)
         ]
 
     let unmergeAllRequest =
