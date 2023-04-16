@@ -237,13 +237,13 @@ module SheetsRequests =
             )
         updateBordersRequest
 
-    let createSetBackgroundColorRequest gridRange color =
+    let createSetBackgroundColorRequest range color =
         let updateCellFormatRequest = Request()
         updateCellFormatRequest.RepeatCell <-
             let cellFormat = CellFormat(BackgroundColor = color)
             let cellData = CellData(UserEnteredFormat = cellFormat)
             RepeatCellRequest(
-                Range = gridRange,
+                Range = (range |> TwoDimensionRange.toGridRange),
                 Cell = cellData,
                 Fields =
                     $"{nameof (cellData.UserEnteredFormat)}.{nameof (cellFormat.BackgroundColor)}"

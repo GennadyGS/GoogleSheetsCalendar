@@ -8,7 +8,6 @@ open GoogleSheets
 open Calendar
 
 let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calendar =
-    let weeks = Calendar.getWeeks calendar
 
     let clearFormatting () =
         let range = TwoDimensionRange.unbounded (Some sheetId)
@@ -17,6 +16,8 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
         SheetsService.batchUpdate sheetsService spreadsheetId [ clearFormattingRequest ]
 
     clearFormatting ()
+
+    let weeks = Calendar.getWeeks calendar
 
     let headerRowRange = Range.single 0
     let weeksRowRange =
@@ -234,7 +235,12 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
             for (weekNumber, week) in List.indexed weeks do
                 for dayOfWeekNumber in [ 0 .. DaysPerWeek - 1 ] do
                     if not week.DaysActive[dayOfWeekNumber] then
-                        let range = createSingleCellRange (weekNumber + 1, dayOfWeekNumber + 2)
+                        let range =
+                            {
+                                SheetId = Some sheetId
+                                Rows = Range.singleSubrange weekNumber weeksRowRange
+                                Columns = Range.singleSubrange dayOfWeekNumber daysOfWeekColumnRange
+                            }
                         SheetsRequests.createSetBackgroundColorRequest range inactiveDayColor
         |]
 
