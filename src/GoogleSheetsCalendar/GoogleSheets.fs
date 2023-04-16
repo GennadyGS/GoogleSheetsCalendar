@@ -211,6 +211,14 @@ module SheetsRequests =
             AppendDimensionRequest(SheetId = sheetId, Dimension = dimension, Length = length)
         result
 
+    let createSetDimensionLengthRequests (sheetId, dimension, length) =
+        [
+            createAppendDimensionRequest (sheetId, dimension, length)
+            let deleteDimensionRange =
+                DimensionRange(Dimension = dimension, StartIndex = length)
+            createDeleteDimensionRequest deleteDimensionRange
+        ]
+
     let createUnmergeCellsRequest range =
         let result = new Request()
         result.UnmergeCells <- UnmergeCellsRequest(Range = (TwoDimensionRange.toGridRange range))

@@ -144,20 +144,12 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
     let setSheetPropertiesRequest =
         SheetsRequests.createSetSheetPropertiesRequest (Some 1, Some 2)
 
-    let createSetDimensionLengthRequests (sheetId, dimension, length) =
-        [
-            SheetsRequests.createAppendDimensionRequest (sheetId, dimension, length)
-            let deleteDimensionRange =
-                DimensionRange(Dimension = dimension, StartIndex = length)
-            SheetsRequests.createDeleteDimensionRequest deleteDimensionRange
-        ]
-
     let columnCount = Range.getEndIndexValue dataColumnRange + 1
     let rowCount = Range.getEndIndexValue dataRowRange + 1
     let setDimensionLengthRequests =
         [
-            yield! createSetDimensionLengthRequests (sheetId, "COLUMNS", columnCount)
-            yield! createSetDimensionLengthRequests (sheetId, "ROWS", rowCount)
+            yield! SheetsRequests.createSetDimensionLengthRequests (sheetId, "COLUMNS", columnCount)
+            yield! SheetsRequests.createSetDimensionLengthRequests (sheetId, "ROWS", rowCount)
         ]
 
     let unmergeAllRequest =
