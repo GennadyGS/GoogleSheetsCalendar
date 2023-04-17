@@ -2,20 +2,17 @@
 
 open System
 open System.Globalization
-open Google.Apis.Sheets.v4
 open Google.Apis.Sheets.v4.Data
 open GoogleSheets
 open Calendar
 
+let private clearFormatting (spreadsheet: Spreadsheet) sheetId =
+    let request = SheetsRequests.createClearFormattingOfSheetRequest sheetId
+    Spreadsheet.update spreadsheet request
+    
 let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
 
-    let clearFormatting () =
-        let range = GridRange.unbounded (Some sheetId)
-        let clearFormattingRequest = SheetsRequests.createClearFormattingRequest range
-
-        Spreadsheet.batchUpdate spreadsheet [ clearFormattingRequest ]
-
-    clearFormatting ()
+    clearFormatting spreadsheet sheetId
 
     let weeks = Calendar.getWeeks calendar
 

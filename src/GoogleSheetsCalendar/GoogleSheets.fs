@@ -208,6 +208,10 @@ module SheetsRequests =
             )
         request
 
+    let createClearFormattingOfSheetRequest sheetId =
+        let range = GridRange.unbounded (Some sheetId)
+        createClearFormattingRequest range
+
     let createSetSheetPropertiesRequest (sheetProperties: SheetProperties) =
         let request = new Request()
         let sheetProperties =
