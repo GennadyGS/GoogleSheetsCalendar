@@ -7,7 +7,7 @@ open Google.Apis.Sheets.v4.Data
 open GoogleSheets
 open Calendar
 
-let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calendar =
+let renderCalendar (sheetsService: SheetsService) spreadsheetId sheetId calendar =
 
     let clearFormatting () =
         let range = GridRange.unbounded (Some sheetId)

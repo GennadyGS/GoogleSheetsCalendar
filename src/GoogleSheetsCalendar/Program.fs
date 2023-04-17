@@ -47,6 +47,4 @@ let configuration = createConfiguration (getRootDirectoryPath ())
 
 configuration.Year
 |> Calendar.calculate configuration.FirstDayOfWeek
-|> CalendarRenderer.renderCalendar
-    sheetsService
-    (configuration.SpreadsheetId, configuration.SheetId)
+|> CalendarRenderer.renderCalendar sheetsService configuration.SpreadsheetId configuration.SheetId
