@@ -37,106 +37,6 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
                 monthTotalColumnRange
             ]
 
-    let updateValues () =
-        let range =
-            {
-                SheetId = Some sheetId
-                Rows = headerRowRange
-                Columns = Range.unbounded
-            }
-        let firstDayOfWeek = Calendar.getFirstDayOfWeek calendar
-        let dayOfWeekNames =
-            Enum.GetValues<DayOfWeek>()
-            |> Array.map (DayOfWeek.addDays (int firstDayOfWeek))
-            |> Array.map CultureInfo.InvariantCulture.DateTimeFormat.GetDayName
-            |> Array.toList
-
-        let values =
-            [
-                "Start Date"
-                "End Date"
-                yield! dayOfWeekNames
-                "Week Total"
-                "Month Total"
-            ]
-            |> List.singleton
-        Spreadsheet.updateValuesInRange spreadsheet (range, values)
-
-        let range =
-            {
-                SheetId = Some sheetId
-                Rows = weeksRowRange
-                Columns = headerColumnRange
-            }
-        let dateValues =
-            [
-                for week in weeks -> [ week.StartDate; week.EndDate ]
-            ]
-        Spreadsheet.updateValuesInRange spreadsheet (range, dateValues)
-
-        let weekSumFormulaValues =
-            weeksRowRange
-            |> Range.getIndexValues
-            |> List.map (fun row ->
-                {
-                    SheetId = Some sheetId
-                    Rows = Range.single row
-                    Columns = daysOfWeekColumnRange
-                }
-                |> SheetFormula.sumofRange
-                |> List.singleton)
-        let range =
-            {
-                SheetId = Some sheetId
-                Rows = weeksRowRange
-                Columns = weekTotalColumnRange
-            }
-        Spreadsheet.updateValuesInRange spreadsheet (range, weekSumFormulaValues)
-
-        let monthSumFormulaValues =
-            calendar
-            |> Calendar.getWeekNumberRanges
-            |> List.collect (fun (startWeekNumber, weekCount) ->
-                {
-                    SheetId = Some sheetId
-                    Rows =
-                        weeksRowRange
-                        |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
-                    Columns = daysOfWeekColumnRange
-                }
-                |> SheetFormula.sumofRange
-                |> List.singleton
-                |> List.replicate weekCount)
-
-        let range =
-            {
-                SheetId = Some sheetId
-                Rows = weeksRowRange
-                Columns = monthTotalColumnRange
-            }
-        Spreadsheet.updateValuesInRange spreadsheet (range, monthSumFormulaValues)
-
-        let dayOfWeekSumFormulaValues =
-            dataColumnRange
-            |> Range.getIndexValues
-            |> List.map (fun column ->
-                {
-                    SheetId = Some sheetId
-                    Rows = weeksRowRange
-                    Columns = Range.single column
-                }
-                |> SheetFormula.sumofRange)
-            |> List.singleton
-        let range =
-            {
-                SheetId = Some sheetId
-                Rows = totalRowRange
-                Columns = dataColumnRange
-            }
-        Spreadsheet.updateValuesInRange spreadsheet (range, dayOfWeekSumFormulaValues)
-
-    updateValues ()
-
     let sheetProperties =
         { SheetProperties.defaultValue with
             FrozenRowCount = Some(Range.getCount headerRowRange)
@@ -241,3 +141,104 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
             yield! setCellBackgroundColorRequests
         ]
     Spreadsheet.batchUpdate spreadsheet requests
+
+    let updateValues () =
+        let range =
+            {
+                SheetId = Some sheetId
+                Rows = headerRowRange
+                Columns = Range.unbounded
+            }
+        let firstDayOfWeek = Calendar.getFirstDayOfWeek calendar
+        let dayOfWeekNames =
+            Enum.GetValues<DayOfWeek>()
+            |> Array.map (DayOfWeek.addDays (int firstDayOfWeek))
+            |> Array.map CultureInfo.InvariantCulture.DateTimeFormat.GetDayName
+            |> Array.toList
+
+        let values =
+            [
+                "Start Date"
+                "End Date"
+                yield! dayOfWeekNames
+                "Week Total"
+                "Month Total"
+            ]
+            |> List.singleton
+        Spreadsheet.updateValuesInRange spreadsheet (range, values)
+
+        let range =
+            {
+                SheetId = Some sheetId
+                Rows = weeksRowRange
+                Columns = headerColumnRange
+            }
+        let dateValues =
+            [
+                for week in weeks -> [ week.StartDate; week.EndDate ]
+            ]
+        Spreadsheet.updateValuesInRange spreadsheet (range, dateValues)
+
+        let weekSumFormulaValues =
+            weeksRowRange
+            |> Range.getIndexValues
+            |> List.map (fun row ->
+                {
+                    SheetId = Some sheetId
+                    Rows = Range.single row
+                    Columns = daysOfWeekColumnRange
+                }
+                |> SheetFormula.sumofRange
+                |> List.singleton)
+        let range =
+            {
+                SheetId = Some sheetId
+                Rows = weeksRowRange
+                Columns = weekTotalColumnRange
+            }
+        Spreadsheet.updateValuesInRange spreadsheet (range, weekSumFormulaValues)
+
+        let monthSumFormulaValues =
+            calendar
+            |> Calendar.getWeekNumberRanges
+            |> List.collect (fun (startWeekNumber, weekCount) ->
+                {
+                    SheetId = Some sheetId
+                    Rows =
+                        weeksRowRange
+                        |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
+                    Columns = daysOfWeekColumnRange
+                }
+                |> SheetFormula.sumofRange
+                |> List.singleton
+                |> List.replicate weekCount)
+
+        let range =
+            {
+                SheetId = Some sheetId
+                Rows = weeksRowRange
+                Columns = monthTotalColumnRange
+            }
+        Spreadsheet.updateValuesInRange spreadsheet (range, monthSumFormulaValues)
+
+        let dayOfWeekSumFormulaValues =
+            dataColumnRange
+            |> Range.getIndexValues
+            |> List.map (fun column ->
+                {
+                    SheetId = Some sheetId
+                    Rows = weeksRowRange
+                    Columns = Range.single column
+                }
+                |> SheetFormula.sumofRange)
+            |> List.singleton
+        let range =
+            {
+                SheetId = Some sheetId
+                Rows = totalRowRange
+                Columns = dataColumnRange
+            }
+        Spreadsheet.updateValuesInRange spreadsheet (range, dayOfWeekSumFormulaValues)
+
+    updateValues ()
+
