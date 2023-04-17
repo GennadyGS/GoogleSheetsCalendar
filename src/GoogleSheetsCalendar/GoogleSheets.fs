@@ -172,6 +172,11 @@ module GridRange =
         $"{startReference}:{endReference}"
 
 [<RequireQualifiedAccess>]
+module ValueRange =
+    let box (range, values) =
+        (range, values |> List.map (List.map box))
+
+[<RequireQualifiedAccess>]
 module SheetProperties =
     let defaultValue =
         {
