@@ -6,35 +6,62 @@ open Google.Apis.Sheets.v4.Data
 open GoogleSheets
 open Calendar
 
+type private RowRanges =
+    {
+        Header: Range
+        Weeks: Range
+        Total: Range
+    }
+    member this.Data = Range.union (this.Weeks, this.Total)
+
+type private ColumnRanges =
+    {
+        Header: Range
+        DaysOfWeek: Range
+        WeekTotal: Range
+        MonthTotal: Range
+    }
+    member this.Data =
+        Range.unionAll
+            [
+                this.DaysOfWeek
+                this.WeekTotal
+                this.MonthTotal
+            ]
+
+let private getRowRanges calendar =
+    let weeks = Calendar.getWeeks calendar
+    let header = Range.single 0
+    let weeks = header |> Range.nextRangeWithCount weeks.Length
+    let total = weeks |> Range.nextSingleRange
+    {
+        RowRanges.Header = header
+        Weeks = weeks
+        Total = total
+    }
+
+let private columnRanges =
+    let header = Range.withStartAndCount (0, 2)
+    let daysOfWeek = header |> Range.nextRangeWithCount DaysPerWeek
+    let weekTotal = daysOfWeek |> Range.nextSingleRange
+    let monthTotal = weekTotal |> Range.nextSingleRange
+    {
+        ColumnRanges.Header = header
+        DaysOfWeek = daysOfWeek
+        WeekTotal = weekTotal
+        MonthTotal = monthTotal
+    }
+
 let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
 
     let weeks = Calendar.getWeeks calendar
 
-    let headerRowRange = Range.single 0
-    let weeksRowRange =
-        headerRowRange
-        |> Range.nextRangeWithCount weeks.Length
-    let totalRowRange = weeksRowRange |> Range.nextSingleRange
-    let dataRowRange = Range.union (weeksRowRange, totalRowRange)
-
-    let headerColumnRange = Range.withStartAndCount (0, 2)
-    let daysOfWeekColumnRange =
-        headerColumnRange
-        |> Range.nextRangeWithCount DaysPerWeek
-    let weekTotalColumnRange = daysOfWeekColumnRange |> Range.nextSingleRange
-    let monthTotalColumnRange = weekTotalColumnRange |> Range.nextSingleRange
-    let dataColumnRange =
-        Range.unionAll
-            [
-                daysOfWeekColumnRange
-                weekTotalColumnRange
-                monthTotalColumnRange
-            ]
+    let rowRanges = getRowRanges calendar
 
     let sheetProperties =
         { SheetProperties.defaultValue with
-            FrozenRowCount = Some(Range.getCount headerRowRange)
-            FrozenColumnCount = Some(Range.getCount headerColumnRange)
+            FrozenRowCount = Some(Range.getCount rowRanges.Header)
+            FrozenColumnCount = Some(Range.getCount columnRanges.Header)
         }
     let setSheetPropertiesRequest =
         SheetsRequests.createSetSheetPropertiesRequest sheetProperties
@@ -42,8 +69,8 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
     let clearFormattingRequest =
         SheetsRequests.createClearFormattingOfSheetRequest sheetId
 
-    let columnCount = Range.getEndIndexValue dataColumnRange + 1
-    let rowCount = Range.getEndIndexValue dataRowRange + 1
+    let columnCount = Range.getEndIndexValue columnRanges.Data + 1
+    let rowCount = Range.getEndIndexValue rowRanges.Data + 1
     let setDimensionLengthRequests =
         [
             yield! SheetsRequests.createSetDimensionLengthRequests (sheetId, "COLUMNS", columnCount)
@@ -61,9 +88,9 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
             {
                 SheetId = Some sheetId
                 Rows =
-                    weeksRowRange
+                    rowRanges.Weeks
                     |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
-                Columns = monthTotalColumnRange
+                Columns = columnRanges.MonthTotal
             })
         |> List.map SheetsRequests.createMergeCellsRequest
         |> List.toArray
@@ -81,7 +108,7 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
                 {
                     SheetId = Some sheetId
                     Rows =
-                        weeksRowRange
+                        rowRanges.Weeks
                         |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
                     Columns = Range.unbounded
                 }
@@ -92,7 +119,7 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
             {
                 SheetId = Some sheetId
                 Rows = Range.unbounded
-                Columns = daysOfWeekColumnRange
+                Columns = columnRanges.DaysOfWeek
             }
         SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
 
@@ -101,7 +128,7 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
             {
                 SheetId = Some sheetId
                 Rows = Range.unbounded
-                Columns = weekTotalColumnRange
+                Columns = columnRanges.WeekTotal
             }
         SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
 
@@ -122,8 +149,9 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
                         let range =
                             {
                                 SheetId = Some sheetId
-                                Rows = Range.subrangeSingle weekNumber weeksRowRange
-                                Columns = Range.subrangeSingle dayOfWeekNumber daysOfWeekColumnRange
+                                Rows = Range.subrangeSingle weekNumber rowRanges.Weeks
+                                Columns =
+                                    Range.subrangeSingle dayOfWeekNumber columnRanges.DaysOfWeek
                             }
                         SheetsRequests.createSetBackgroundColorRequest range inactiveDayColor
         |]
@@ -144,7 +172,7 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
         let range =
             {
                 SheetId = Some sheetId
-                Rows = headerRowRange
+                Rows = rowRanges.Header
                 Columns = Range.unbounded
             }
         let firstDayOfWeek = Calendar.getFirstDayOfWeek calendar
@@ -168,8 +196,8 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
         let range =
             {
                 SheetId = Some sheetId
-                Rows = weeksRowRange
-                Columns = headerColumnRange
+                Rows = rowRanges.Weeks
+                Columns = columnRanges.Header
             }
         let dateValues =
             [
@@ -178,21 +206,21 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
         Spreadsheet.updateValuesInRange spreadsheet (range, dateValues)
 
         let weekSumFormulaValues =
-            weeksRowRange
+            rowRanges.Weeks
             |> Range.getIndexValues
             |> List.map (fun row ->
                 {
                     SheetId = Some sheetId
                     Rows = Range.single row
-                    Columns = daysOfWeekColumnRange
+                    Columns = columnRanges.DaysOfWeek
                 }
                 |> SheetFormula.sumofRange
                 |> List.singleton)
         let range =
             {
                 SheetId = Some sheetId
-                Rows = weeksRowRange
-                Columns = weekTotalColumnRange
+                Rows = rowRanges.Weeks
+                Columns = columnRanges.WeekTotal
             }
         Spreadsheet.updateValuesInRange spreadsheet (range, weekSumFormulaValues)
 
@@ -203,9 +231,9 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
                 {
                     SheetId = Some sheetId
                     Rows =
-                        weeksRowRange
+                        rowRanges.Weeks
                         |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
-                    Columns = daysOfWeekColumnRange
+                    Columns = columnRanges.DaysOfWeek
                 }
                 |> SheetFormula.sumofRange
                 |> List.singleton
@@ -214,18 +242,18 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
         let range =
             {
                 SheetId = Some sheetId
-                Rows = weeksRowRange
-                Columns = monthTotalColumnRange
+                Rows = rowRanges.Weeks
+                Columns = columnRanges.MonthTotal
             }
         Spreadsheet.updateValuesInRange spreadsheet (range, monthSumFormulaValues)
 
         let dayOfWeekSumFormulaValues =
-            dataColumnRange
+            columnRanges.Data
             |> Range.getIndexValues
             |> List.map (fun column ->
                 {
                     SheetId = Some sheetId
-                    Rows = weeksRowRange
+                    Rows = rowRanges.Weeks
                     Columns = Range.single column
                 }
                 |> SheetFormula.sumofRange)
@@ -233,8 +261,8 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
         let range =
             {
                 SheetId = Some sheetId
-                Rows = totalRowRange
-                Columns = dataColumnRange
+                Rows = rowRanges.Total
+                Columns = columnRanges.Data
             }
         Spreadsheet.updateValuesInRange spreadsheet (range, dayOfWeekSumFormulaValues)
 
