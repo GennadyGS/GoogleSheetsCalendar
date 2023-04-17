@@ -78,11 +78,12 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
         SheetsService.updateValuesInRange sheetsService spreadsheetId (range, dateValues)
 
         let weekSumFormulaValues =
-            [ 0 .. weeks.Length - 1 ]
-            |> List.map (fun weekNumber ->
+            weeksRowRange
+            |> Range.getIndexValues
+            |> List.map (fun row ->
                 {
                     SheetId = Some sheetId
-                    Rows = weeksRowRange |> Range.subrangeSingle weekNumber
+                    Rows = Range.single row
                     Columns = daysOfWeekColumnRange
                 }
                 |> SheetFormula.sumofRange
@@ -119,7 +120,8 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
         SheetsService.updateValuesInRange sheetsService spreadsheetId (range, monthSumFormulaValues)
 
         let dayOfWeekSumFormulaValues =
-            [ 2 .. DaysPerWeek + 3 ]
+            dataColumnRange
+            |> Range.getIndexValues
             |> List.map (fun column ->
                 {
                     SheetId = Some sheetId

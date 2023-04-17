@@ -55,6 +55,9 @@ module Range =
         range.EndIndex
         |> Option.defaultWith (fun _ -> failwith "End index is not defined.")
 
+    let getIndexValues range =
+        [ getStartIndexValue range .. getEndIndexValue range ]
+
     let unbounded = { StartIndex = None; EndIndex = None }
 
     let startingFrom index =
