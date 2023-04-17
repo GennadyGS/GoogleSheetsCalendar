@@ -6,13 +6,7 @@ open Google.Apis.Sheets.v4.Data
 open GoogleSheets
 open Calendar
 
-let private clearFormatting (spreadsheet: Spreadsheet) sheetId =
-    let request = SheetsRequests.createClearFormattingOfSheetRequest sheetId
-    Spreadsheet.update spreadsheet request
-    
 let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
-
-    clearFormatting spreadsheet sheetId
 
     let weeks = Calendar.getWeeks calendar
 
@@ -44,6 +38,8 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
         }
     let setSheetPropertiesRequest =
         SheetsRequests.createSetSheetPropertiesRequest sheetProperties
+
+    let clearFormattingRequest = SheetsRequests.createClearFormattingOfSheetRequest sheetId
 
     let columnCount = Range.getEndIndexValue dataColumnRange + 1
     let rowCount = Range.getEndIndexValue dataRowRange + 1
@@ -135,6 +131,7 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
         [
             yield! setDimensionLengthRequests
             setSheetPropertiesRequest
+            clearFormattingRequest
             unmergeAllRequest
             yield! mergeCellRequests
             yield! setBordersRequests
