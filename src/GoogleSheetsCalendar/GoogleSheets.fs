@@ -35,6 +35,14 @@ type Borders =
         Bottom: Border option
     }
 
+type Spreadsheet =
+    internal
+        {
+            SheetsService: SheetsService
+            SpreadsheetId: string
+        }
+
+[<RequireQualifiedAccess>]
 module Borders =
     let none =
         {
@@ -163,6 +171,7 @@ module GridRange =
         let endReference = referenceToString (range.Columns.EndIndex, range.Rows.EndIndex)
         $"{startReference}:{endReference}"
 
+[<RequireQualifiedAccess>]
 module SheetProperties =
     let defaultValue =
         {
@@ -303,6 +312,9 @@ module SheetsService =
             .Execute()
         |> ignore
 
+    let update (sheetsService: SheetsService) spreadsheetId request =
+        batchUpdate sheetsService spreadsheetId [ request ]
+
     let batchUpdateValuesInRange (sheetsService: SheetsService) spreadsheetId rangesAndValues =
         let convertValues values =
             values
@@ -312,9 +324,8 @@ module SheetsService =
         let valueRanges =
             rangesAndValues
             |> List.map (fun (range, values) ->
-                let gridRange = range |> GridRange.toApiGridRange
                 DataFilterValueRange(
-                    DataFilter = DataFilter(GridRange = gridRange),
+                    DataFilter = DataFilter(GridRange = (range |> GridRange.toApiGridRange)),
                     Values = convertValues values,
                     MajorDimension = "ROWS"
                 ))
@@ -335,3 +346,33 @@ module SheetsService =
 
     let updateValuesInRange (sheetsService: SheetsService) spreadsheetId (range, values) =
         batchUpdateValuesInRange sheetsService spreadsheetId [ (range, values) ]
+
+[<RequireQualifiedAccess>]
+module Spreadsheet =
+    let create sheetsService spreadSheetId =
+        {
+            Spreadsheet.SheetsService = sheetsService
+            Spreadsheet.SpreadsheetId = spreadSheetId
+        }
+
+    let createFromCredentialFileName credentialFileName spreadSheetId =
+        let sheetsService = SheetsService.create credentialFileName
+        create sheetsService spreadSheetId
+
+    let batchUpdate (sheetsService: Spreadsheet) requests =
+        SheetsService.batchUpdate sheetsService.SheetsService sheetsService.SpreadsheetId requests
+
+    let update (sheetsService: Spreadsheet) request =
+        SheetsService.update sheetsService.SheetsService sheetsService.SpreadsheetId request
+
+    let batchUpdateValuesInRange (sheetsService: Spreadsheet) rangesAndValues =
+        SheetsService.batchUpdateValuesInRange
+            sheetsService.SheetsService
+            sheetsService.SpreadsheetId
+            rangesAndValues
+
+    let updateValuesInRange (sheetsService: Spreadsheet) (range, values) =
+        SheetsService.updateValuesInRange
+            sheetsService.SheetsService
+            sheetsService.SpreadsheetId
+            (range, values)

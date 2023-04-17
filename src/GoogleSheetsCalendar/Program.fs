@@ -17,6 +17,7 @@ type Configuration =
 [<Literal>]
 let CredentialFileName = "credential.json"
 
+[<RequireQualifiedAccess>]
 module NullCoalesce =
     let coalesce (b: 'a Lazy) (a: 'a) =
         if obj.ReferenceEquals(a, null) then
@@ -39,12 +40,12 @@ let createConfiguration rootDirectoryPath =
     nativeConfiguration.Get<Configuration>()
     |> NullCoalesce.coalesce (lazy raise (InvalidOperationException("Configuration is missing")))
 
-let sheetsService =
-    let credentialFileName = Path.Combine(getRootDirectoryPath (), CredentialFileName)
-    SheetsService.create credentialFileName
-
 let configuration = createConfiguration (getRootDirectoryPath ())
+
+let speadsheet =
+    let credentialFileName = Path.Combine(getRootDirectoryPath (), CredentialFileName)
+    Spreadsheet.createFromCredentialFileName credentialFileName configuration.SpreadsheetId
 
 configuration.Year
 |> Calendar.calculate configuration.FirstDayOfWeek
-|> CalendarRenderer.renderCalendar sheetsService configuration.SpreadsheetId configuration.SheetId
+|> CalendarRenderer.renderCalendar speadsheet configuration.SheetId

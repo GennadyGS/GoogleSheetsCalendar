@@ -7,13 +7,13 @@ open Google.Apis.Sheets.v4.Data
 open GoogleSheets
 open Calendar
 
-let renderCalendar (sheetsService: SheetsService) spreadsheetId sheetId calendar =
+let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
 
     let clearFormatting () =
         let range = GridRange.unbounded (Some sheetId)
         let clearFormattingRequest = SheetsRequests.createClearFormattingRequest range
 
-        SheetsService.batchUpdate sheetsService spreadsheetId [ clearFormattingRequest ]
+        Spreadsheet.batchUpdate spreadsheet [ clearFormattingRequest ]
 
     clearFormatting ()
 
@@ -63,7 +63,7 @@ let renderCalendar (sheetsService: SheetsService) spreadsheetId sheetId calendar
                 "Month Total"
             ]
             |> List.singleton
-        SheetsService.updateValuesInRange sheetsService spreadsheetId (range, values)
+        Spreadsheet.updateValuesInRange spreadsheet (range, values)
 
         let range =
             {
@@ -75,7 +75,7 @@ let renderCalendar (sheetsService: SheetsService) spreadsheetId sheetId calendar
             [
                 for week in weeks -> [ week.StartDate; week.EndDate ]
             ]
-        SheetsService.updateValuesInRange sheetsService spreadsheetId (range, dateValues)
+        Spreadsheet.updateValuesInRange spreadsheet (range, dateValues)
 
         let weekSumFormulaValues =
             weeksRowRange
@@ -94,7 +94,7 @@ let renderCalendar (sheetsService: SheetsService) spreadsheetId sheetId calendar
                 Rows = weeksRowRange
                 Columns = weekTotalColumnRange
             }
-        SheetsService.updateValuesInRange sheetsService spreadsheetId (range, weekSumFormulaValues)
+        Spreadsheet.updateValuesInRange spreadsheet (range, weekSumFormulaValues)
 
         let monthSumFormulaValues =
             calendar
@@ -117,7 +117,7 @@ let renderCalendar (sheetsService: SheetsService) spreadsheetId sheetId calendar
                 Rows = weeksRowRange
                 Columns = monthTotalColumnRange
             }
-        SheetsService.updateValuesInRange sheetsService spreadsheetId (range, monthSumFormulaValues)
+        Spreadsheet.updateValuesInRange spreadsheet (range, monthSumFormulaValues)
 
         let dayOfWeekSumFormulaValues =
             dataColumnRange
@@ -136,10 +136,7 @@ let renderCalendar (sheetsService: SheetsService) spreadsheetId sheetId calendar
                 Rows = totalRowRange
                 Columns = dataColumnRange
             }
-        SheetsService.updateValuesInRange
-            sheetsService
-            spreadsheetId
-            (range, dayOfWeekSumFormulaValues)
+        Spreadsheet.updateValuesInRange spreadsheet (range, dayOfWeekSumFormulaValues)
 
     updateValues ()
 
@@ -246,4 +243,4 @@ let renderCalendar (sheetsService: SheetsService) spreadsheetId sheetId calendar
             yield! setBordersRequests
             yield! setCellBackgroundColorRequests
         ]
-    SheetsService.batchUpdate sheetsService spreadsheetId requests
+    Spreadsheet.batchUpdate spreadsheet requests
