@@ -21,6 +21,18 @@ type GridRange =
         SheetId: int option
     }
 
+type AggregationFunction =
+    | Sum
+    | Avg
+    | Min
+    | Max
+    override this.ToString() =
+        match this with
+        | Sum -> "SUM"
+        | Avg -> "AVG"
+        | Min -> "MIN"
+        | Max -> "MAX"
+
 type SheetProperties =
     {
         FrozenRowCount: int option
@@ -197,34 +209,36 @@ module SheetExpression =
         let rangeString = GridRange.toString range
         $"INDIRECT(\"{rangeString}\", FALSE)"
 
-    let sum (expression: string) = $"SUM({expression})"
+    let aggregate aggregationFunction range =
+        let functionIdentifier = string aggregationFunction
+        $"{functionIdentifier}({rangeReference range})"
 
 [<RequireQualifiedAccess>]
-module SheetFormula =
+module SheetFormulaValue =
     let fromExpression (expression: string) = $"={expression}"
-
-    let sumofRange range =
-        range
-        |> SheetExpression.rangeReference
-        |> SheetExpression.sum
-        |> fromExpression
 
 [<RequireQualifiedAccess>]
 module SheetFormulaValues =
-    let rowWiseSums (gridRange: GridRange) =
+    let rowWiseAggregation aggregationFunction (gridRange: GridRange) =
         gridRange.Rows
         |> Range.getIndexValues
         |> List.map (fun rowIndex ->
-            { gridRange with Rows = Range.single rowIndex }
-            |> SheetFormula.sumofRange
+            { gridRange with
+                Rows = Range.single rowIndex
+            }
+            |> SheetExpression.aggregate aggregationFunction
+            |> SheetFormulaValue.fromExpression
             |> List.singleton)
-        
-    let columnWiseSums (gridRange: GridRange) =
+
+    let columnWiseAggregation aggregationFunction (gridRange: GridRange) =
         gridRange.Columns
         |> Range.getIndexValues
         |> List.map (fun columnIndex ->
-            { gridRange with Columns = Range.single columnIndex }
-            |> SheetFormula.sumofRange)
+            { gridRange with
+                Columns = Range.single columnIndex
+            }
+            |> SheetExpression.aggregate aggregationFunction
+            |> SheetFormulaValue.fromExpression)
         |> List.singleton
 
 [<RequireQualifiedAccess>]

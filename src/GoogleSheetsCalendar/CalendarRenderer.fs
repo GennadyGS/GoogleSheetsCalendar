@@ -185,7 +185,7 @@ let private getUpdateValuesRequests sheetId calendar =
     let weekTotalsValueRange =
         let formulaValues =
             createGrigRange (rowRanges.Weeks, columnRanges.DaysOfWeek)
-            |> SheetFormulaValues.rowWiseSums
+            |> SheetFormulaValues.rowWiseAggregation AggregationFunction.Sum
         let range = createGrigRange (rowRanges.Weeks, columnRanges.WeekTotals)
         (range, formulaValues)
 
@@ -198,7 +198,8 @@ let private getUpdateValuesRequests sheetId calendar =
                     rowRanges.Weeks
                     |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
                 createGrigRange (rows, columnRanges.DaysOfWeek)
-                |> SheetFormula.sumofRange
+                |> SheetExpression.aggregate AggregationFunction.Sum
+                |> SheetFormulaValue.fromExpression
                 |> List.singleton
                 |> List.replicate weekCount)
         let range = createGrigRange (rowRanges.Weeks, columnRanges.MonthTotals)
@@ -207,7 +208,7 @@ let private getUpdateValuesRequests sheetId calendar =
     let totalsRowValueRange =
         let formulaValues =
             createGrigRange (rowRanges.Weeks, columnRanges.Data)
-            |> SheetFormulaValues.columnWiseSums
+            |> SheetFormulaValues.columnWiseAggregation AggregationFunction.Sum
         let range = createGrigRange (rowRanges.Totals, columnRanges.Data)
         (range, formulaValues)
 
