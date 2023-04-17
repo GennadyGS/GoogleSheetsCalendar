@@ -53,14 +53,9 @@ let private columnRanges =
     }
 
 let private getUpdateSheetRequests sheetId calendar =
-    let rowRanges = getRowRanges calendar
+    let createGrigRange = GridRange.create (Some sheetId)
 
-    let createGrigRange (rows, columns) =
-        {
-            GridRange.SheetId = Some sheetId
-            Rows = rows
-            Columns = columns
-        }
+    let rowRanges = getRowRanges calendar
 
     let sheetProperties =
         { SheetProperties.defaultValue with
@@ -151,13 +146,10 @@ let private getUpdateSheetRequests sheetId calendar =
     ]
 
 let private getUpdateValuesRequests sheetId calendar =
+    let createGrigRange = GridRange.create (Some sheetId)
+
     let rowRanges = getRowRanges calendar
-    let createGrigRange (rows, columns) =
-        {
-            GridRange.SheetId = Some sheetId
-            Rows = rows
-            Columns = columns
-        }
+
     let titlesRowValueRange =
         let range = createGrigRange (rowRanges.Header, Range.unbounded)
         let firstDayOfWeek = Calendar.getFirstDayOfWeek calendar

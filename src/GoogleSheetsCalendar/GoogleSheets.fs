@@ -134,11 +134,18 @@ module Range =
 
 [<RequireQualifiedAccess>]
 module GridRange =
+    let create sheetId (rows, columns) =
+        {
+            SheetId = sheetId
+            Rows = rows
+            Columns = columns
+        }
+
     let unbounded sheetId =
         {
+            SheetId = sheetId
             Rows = Range.unbounded
             Columns = Range.unbounded
-            SheetId = sheetId
         }
 
     let toApiGridRange (range: GridRange) =
