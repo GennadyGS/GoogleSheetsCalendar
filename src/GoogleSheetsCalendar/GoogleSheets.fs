@@ -298,7 +298,7 @@ module SheetsRequests =
         [
             createAppendDimensionRequest (sheetId, dimension, length)
             let deleteDimensionRange =
-                DimensionRange(Dimension = dimension, StartIndex = length)
+                DimensionRange(SheetId = sheetId, Dimension = dimension, StartIndex = length)
             createDeleteDimensionRequest deleteDimensionRange
         ]
 
