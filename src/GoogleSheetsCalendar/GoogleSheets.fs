@@ -14,7 +14,7 @@ type Range =
         EndIndex: int option
     }
 
-type TwoDimensionRange =
+type GridRange =
     {
         Columns: Range
         Rows: Range
@@ -56,7 +56,9 @@ module Range =
         |> Option.defaultWith (fun _ -> failwith "End index is not defined.")
 
     let getIndexValues range =
-        [ getStartIndexValue range .. getEndIndexValue range ]
+        [
+            getStartIndexValue range .. getEndIndexValue range
+        ]
 
     let unbounded = { StartIndex = None; EndIndex = None }
 
@@ -113,7 +115,7 @@ module Range =
         |> List.reduce (fun range1 range2 -> union (range1, range2))
 
 [<RequireQualifiedAccess>]
-module TwoDimensionRange =
+module GridRange =
     let unbounded sheetId =
         {
             Rows = Range.unbounded
@@ -121,7 +123,7 @@ module TwoDimensionRange =
             SheetId = sheetId
         }
 
-    let toGridRange (range: TwoDimensionRange) =
+    let toApiGridRange (range: GridRange) =
         let mapStartIndex index = index |> Option.toNullable
         let mapEndIndex index =
             index |> Option.map ((+) 1) |> Option.toNullable
@@ -133,7 +135,7 @@ module TwoDimensionRange =
             SheetId = (range.SheetId |> Option.toNullable)
         )
 
-    let toString (range: TwoDimensionRange) =
+    let toString (range: GridRange) =
         let indexToString dimensionTag index =
             match index with
             | Some value -> dimensionTag + string (value + 1)
@@ -154,7 +156,7 @@ module TwoDimensionRange =
 [<RequireQualifiedAccess>]
 module SheetExpression =
     let rangeReference range =
-        let rangeString = TwoDimensionRange.toString range
+        let rangeString = GridRange.toString range
         $"INDIRECT(\"{rangeString}\", FALSE)"
 
     let sum (expression: string) = $"SUM({expression})"
@@ -175,7 +177,7 @@ module SheetsRequests =
         let request = Request()
         request.UpdateCells <-
             UpdateCellsRequest(
-                Range = (TwoDimensionRange.toGridRange range),
+                Range = (GridRange.toApiGridRange range),
                 Fields = nameof (Unchecked.defaultof<CellData>.UserEnteredFormat)
             )
         request
@@ -224,23 +226,20 @@ module SheetsRequests =
 
     let createUnmergeCellsRequest range =
         let result = new Request()
-        result.UnmergeCells <- UnmergeCellsRequest(Range = (TwoDimensionRange.toGridRange range))
+        result.UnmergeCells <- UnmergeCellsRequest(Range = (GridRange.toApiGridRange range))
         result
 
     let createMergeCellsRequest range =
         let result = new Request()
         result.MergeCells <-
-            MergeCellsRequest(
-                MergeType = "MERGE_ALL",
-                Range = (TwoDimensionRange.toGridRange range)
-            )
+            MergeCellsRequest(MergeType = "MERGE_ALL", Range = (GridRange.toApiGridRange range))
         result
 
     let createUpdateBorderRequest (range, borders) =
         let updateBordersRequest = new Request()
         updateBordersRequest.UpdateBorders <-
             UpdateBordersRequest(
-                Range = (range |> TwoDimensionRange.toGridRange),
+                Range = (range |> GridRange.toApiGridRange),
                 Left = Option.defaultValue null borders.Left,
                 Right = Option.defaultValue null borders.Right,
                 Top = Option.defaultValue null borders.Top,
@@ -254,7 +253,7 @@ module SheetsRequests =
             let cellFormat = CellFormat(BackgroundColor = color)
             let cellData = CellData(UserEnteredFormat = cellFormat)
             RepeatCellRequest(
-                Range = (range |> TwoDimensionRange.toGridRange),
+                Range = (range |> GridRange.toApiGridRange),
                 Cell = cellData,
                 Fields =
                     $"{nameof (cellData.UserEnteredFormat)}.{nameof (cellFormat.BackgroundColor)}"
@@ -296,7 +295,7 @@ module SheetsService =
         let valueRanges =
             rangesAndValues
             |> List.map (fun (range, values) ->
-                let gridRange = range |> TwoDimensionRange.toGridRange
+                let gridRange = range |> GridRange.toApiGridRange
                 DataFilterValueRange(
                     DataFilter = DataFilter(GridRange = gridRange),
                     Values = convertValues values,

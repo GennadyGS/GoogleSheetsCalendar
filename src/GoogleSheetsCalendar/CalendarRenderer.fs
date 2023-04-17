@@ -10,7 +10,7 @@ open Calendar
 let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calendar =
 
     let clearFormatting () =
-        let range = TwoDimensionRange.unbounded (Some sheetId)
+        let range = GridRange.unbounded (Some sheetId)
         let clearFormattingRequest = SheetsRequests.createClearFormattingRequest range
 
         SheetsService.batchUpdate sheetsService spreadsheetId [ clearFormattingRequest ]
@@ -155,7 +155,7 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
         ]
 
     let unmergeAllRequest =
-        TwoDimensionRange.unbounded (Some sheetId)
+        GridRange.unbounded (Some sheetId)
         |> SheetsRequests.createUnmergeCellsRequest
 
     let mergeCellRequests =
@@ -174,7 +174,7 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
 
     let solidBorder = new Border(Style = "SOLID")
     let outerBorderRequest =
-        let range = TwoDimensionRange.unbounded (Some sheetId)
+        let range = GridRange.unbounded (Some sheetId)
         SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
 
     let monthBorderRequests =
