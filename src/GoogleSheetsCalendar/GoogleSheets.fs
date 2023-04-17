@@ -21,6 +21,12 @@ type GridRange =
         SheetId: int option
     }
 
+type SheetProperties =
+    {
+        FrozenRowCount: int option
+        FrozenColumnCount: int option
+    }
+
 type Borders =
     {
         Left: Border option
@@ -54,6 +60,10 @@ module Range =
     let getEndIndexValue range =
         range.EndIndex
         |> Option.defaultWith (fun _ -> failwith "End index is not defined.")
+
+    let getCount range =
+        getEndIndexValue range - getStartIndexValue range
+        + 1
 
     let getIndexValues range =
         [
@@ -153,6 +163,13 @@ module GridRange =
         let endReference = referenceToString (range.Columns.EndIndex, range.Rows.EndIndex)
         $"{startReference}:{endReference}"
 
+module SheetProperties =
+    let defaultValue =
+        {
+            FrozenRowCount = None
+            FrozenColumnCount = None
+        }
+
 [<RequireQualifiedAccess>]
 module SheetExpression =
     let rangeReference range =
@@ -182,14 +199,14 @@ module SheetsRequests =
             )
         request
 
-    let createSetSheetPropertiesRequest (frozenRowCount, frozenColumnCount) =
+    let createSetSheetPropertiesRequest (sheetProperties: SheetProperties) =
         let request = new Request()
         let sheetProperties =
             SheetProperties(
                 GridProperties =
                     GridProperties(
-                        FrozenRowCount = Option.toNullable frozenRowCount,
-                        FrozenColumnCount = Option.toNullable frozenColumnCount
+                        FrozenRowCount = Option.toNullable sheetProperties.FrozenRowCount,
+                        FrozenColumnCount = Option.toNullable sheetProperties.FrozenColumnCount
                     )
             )
 

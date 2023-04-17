@@ -143,8 +143,13 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
 
     updateValues ()
 
+    let sheetProperties =
+        { SheetProperties.defaultValue with
+            FrozenRowCount = Some(Range.getCount headerRowRange)
+            FrozenColumnCount = Some(Range.getCount headerColumnRange)
+        }
     let setSheetPropertiesRequest =
-        SheetsRequests.createSetSheetPropertiesRequest (Some 1, Some 2)
+        SheetsRequests.createSetSheetPropertiesRequest sheetProperties
 
     let columnCount = Range.getEndIndexValue dataColumnRange + 1
     let rowCount = Range.getEndIndexValue dataRowRange + 1
