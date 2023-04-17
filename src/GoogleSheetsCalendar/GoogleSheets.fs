@@ -210,6 +210,24 @@ module SheetFormula =
         |> fromExpression
 
 [<RequireQualifiedAccess>]
+module SheetFormulaValues =
+    let rowWiseSums (gridRange: GridRange) =
+        gridRange.Rows
+        |> Range.getIndexValues
+        |> List.map (fun rowIndex ->
+            { gridRange with Rows = Range.single rowIndex }
+            |> SheetFormula.sumofRange
+            |> List.singleton)
+        
+    let columnWiseSums (gridRange: GridRange) =
+        gridRange.Columns
+        |> Range.getIndexValues
+        |> List.map (fun columnIndex ->
+            { gridRange with Columns = Range.single columnIndex }
+            |> SheetFormula.sumofRange)
+        |> List.singleton
+
+[<RequireQualifiedAccess>]
 module Color =
     let grey intencity =
         Color(Red = Nullable intencity, Green = Nullable intencity, Blue = Nullable intencity)

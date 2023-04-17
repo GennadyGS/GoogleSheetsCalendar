@@ -178,24 +178,19 @@ let private getUpdateValuesRequests sheetId calendar =
         let range = createGrigRange (rowRanges.Weeks, columnRanges.Header)
         let values =
             [
-                let weeks = Calendar.getWeeks calendar
-                for week in weeks -> [ week.StartDate; week.EndDate ]
+                for week in Calendar.getWeeks calendar -> [ week.StartDate; week.EndDate ]
             ]
         (range, values)
 
     let weekTotalsValueRange =
-        let values =
-            rowRanges.Weeks
-            |> Range.getIndexValues
-            |> List.map (fun rowIndex ->
-                createGrigRange (Range.single rowIndex, columnRanges.DaysOfWeek)
-                |> SheetFormula.sumofRange
-                |> List.singleton)
+        let formulaValues =
+            createGrigRange (rowRanges.Weeks, columnRanges.DaysOfWeek)
+            |> SheetFormulaValues.rowWiseSums
         let range = createGrigRange (rowRanges.Weeks, columnRanges.WeekTotals)
-        (range, values)
+        (range, formulaValues)
 
     let monthTotalsValueRange =
-        let values =
+        let formulaValues =
             calendar
             |> Calendar.getWeekNumberRanges
             |> List.collect (fun (startWeekNumber, weekCount) ->
@@ -207,18 +202,14 @@ let private getUpdateValuesRequests sheetId calendar =
                 |> List.singleton
                 |> List.replicate weekCount)
         let range = createGrigRange (rowRanges.Weeks, columnRanges.MonthTotals)
-        (range, values)
+        (range, formulaValues)
 
     let totalsRowValueRange =
-        let values =
-            columnRanges.Data
-            |> Range.getIndexValues
-            |> List.map (fun columnIndex ->
-                createGrigRange (rowRanges.Weeks, Range.single columnIndex)
-                |> SheetFormula.sumofRange)
-            |> List.singleton
+        let formulaValues =
+            createGrigRange (rowRanges.Weeks, columnRanges.Data)
+            |> SheetFormulaValues.columnWiseSums
         let range = createGrigRange (rowRanges.Totals, columnRanges.Data)
-        (range, values)
+        (range, formulaValues)
 
     [
         titlesRowValueRange |> ValueRange.box
