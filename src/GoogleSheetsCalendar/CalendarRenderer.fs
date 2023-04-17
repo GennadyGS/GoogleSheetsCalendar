@@ -6,6 +6,9 @@ open Google.Apis.Sheets.v4.Data
 open GoogleSheets
 open Calendar
 
+[<Literal>]
+let private InactiveCellColorIntencity = 0.75f
+
 type private RowRanges =
     {
         Header: Range
@@ -124,7 +127,7 @@ let private getUpdateSheetRequests sheetId calendar =
         ]
 
     let setInactiveCellBackgroundColorRequests =
-        let inactiveDayColor = Color(Red = 0.75f, Green = 0.75f, Blue = 0.75f)
+        let inactiveCellColor = Color.grey InactiveCellColorIntencity
         [|
             let weeks = Calendar.getWeeks calendar
             for (weekNumber, week) in List.indexed weeks do
@@ -133,7 +136,7 @@ let private getUpdateSheetRequests sheetId calendar =
                         let rows = Range.subrangeSingle weekNumber rowRanges.Weeks
                         let columns = Range.subrangeSingle dayOfWeekNumber columnRanges.DaysOfWeek
                         let range = createGrigRange (rows, columns)
-                        SheetsRequests.createSetBackgroundColorRequest range inactiveDayColor
+                        SheetsRequests.createSetBackgroundColorRequest range inactiveCellColor
         |]
 
     [

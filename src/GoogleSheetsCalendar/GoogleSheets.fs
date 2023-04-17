@@ -210,6 +210,11 @@ module SheetFormula =
         |> fromExpression
 
 [<RequireQualifiedAccess>]
+module Color =
+    let grey intencity =
+        Color(Red = Nullable intencity, Green = Nullable intencity, Blue = Nullable intencity)
+
+[<RequireQualifiedAccess>]
 module SheetsRequests =
     let createClearFormattingRequest range =
         let request = Request()
