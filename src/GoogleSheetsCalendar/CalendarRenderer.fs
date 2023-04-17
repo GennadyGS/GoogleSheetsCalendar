@@ -184,12 +184,8 @@ let private getUpdateValuesRequests sheetId calendar =
         let values =
             rowRanges.Weeks
             |> Range.getIndexValues
-            |> List.map (fun row ->
-                {
-                    SheetId = Some sheetId
-                    Rows = Range.single row
-                    Columns = columnRanges.DaysOfWeek
-                }
+            |> List.map (fun rowIndex ->
+                createGrigRange (Range.single rowIndex, columnRanges.DaysOfWeek)
                 |> SheetFormula.sumofRange
                 |> List.singleton)
         let range = createGrigRange (rowRanges.Weeks, columnRanges.WeekTotals)
@@ -200,13 +196,10 @@ let private getUpdateValuesRequests sheetId calendar =
             calendar
             |> Calendar.getWeekNumberRanges
             |> List.collect (fun (startWeekNumber, weekCount) ->
-                {
-                    SheetId = Some sheetId
-                    Rows =
-                        rowRanges.Weeks
-                        |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
-                    Columns = columnRanges.DaysOfWeek
-                }
+                let rows =
+                    rowRanges.Weeks
+                    |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
+                createGrigRange (rows, columnRanges.DaysOfWeek)
                 |> SheetFormula.sumofRange
                 |> List.singleton
                 |> List.replicate weekCount)
