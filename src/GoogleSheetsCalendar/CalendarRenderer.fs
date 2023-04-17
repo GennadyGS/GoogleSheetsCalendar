@@ -57,27 +57,27 @@ let private getUpdateSheetRequests sheetId calendar =
 
     let rowRanges = getRowRanges calendar
 
-    let sheetProperties =
-        { SheetProperties.defaultValue with
-            FrozenRowCount = Some(Range.getCount rowRanges.Header)
-            FrozenColumnCount = Some(Range.getCount columnRanges.Header)
-        }
-    let setSheetPropertiesRequest =
-        SheetsRequests.createSetSheetPropertiesRequest sheetProperties
-
-    let clearFormattingRequest =
-        SheetsRequests.createClearFormattingOfSheetRequest sheetId
-
-    let columnCount = Range.getEndIndexValue columnRanges.Data + 1
-    let rowCount = Range.getEndIndexValue rowRanges.Data + 1
     let setDimensionLengthRequests =
+        let columnCount = Range.getEndIndexValue columnRanges.Data + 1
+        let rowCount = Range.getEndIndexValue rowRanges.Data + 1
         [
             yield! SheetsRequests.createSetDimensionLengthRequests (sheetId, "COLUMNS", columnCount)
             yield! SheetsRequests.createSetDimensionLengthRequests (sheetId, "ROWS", rowCount)
         ]
 
+    let setSheetPropertiesRequest =
+        { SheetProperties.defaultValue with
+            FrozenRowCount = Some(Range.getCount rowRanges.Header)
+            FrozenColumnCount = Some(Range.getCount columnRanges.Header)
+        }
+        |> SheetsRequests.createSetSheetPropertiesRequest
+
+    let clearFormattingRequest =
+        createGrigRange (Range.unbounded, Range.unbounded)
+        |> SheetsRequests.createClearFormattingRequest
+
     let unmergeAllRequest =
-        GridRange.unbounded (Some sheetId)
+        createGrigRange (Range.unbounded, Range.unbounded)
         |> SheetsRequests.createUnmergeCellsRequest
 
     let mergeCellRequests =
@@ -91,30 +91,31 @@ let private getUpdateSheetRequests sheetId calendar =
         |> List.map SheetsRequests.createMergeCellsRequest
         |> List.toArray
 
-    let solidBorder = new Border(Style = "SOLID")
-    let outerBorderRequest =
-        let range = GridRange.unbounded (Some sheetId)
-        SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
-
-    let monthBorderRequests =
-        calendar
-        |> Calendar.getWeekNumberRanges
-        |> List.map (fun (startWeekNumber, weekCount) ->
-            let rows =
-                rowRanges.Weeks
-                |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
-            let range = createGrigRange (rows, Range.unbounded)
-            SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder))
-
-    let dayOfWeeksBorderRequest =
-        let range = createGrigRange (Range.unbounded, columnRanges.DaysOfWeek)
-        SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
-
-    let weekTotalBorderRequest =
-        let range = createGrigRange (Range.unbounded, columnRanges.WeekTotals)
-        SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
-
     let setBordersRequests =
+        let solidBorder = new Border(Style = "SOLID")
+
+        let outerBorderRequest =
+            let range = createGrigRange (Range.unbounded, Range.unbounded)
+            SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
+
+        let monthBorderRequests =
+            calendar
+            |> Calendar.getWeekNumberRanges
+            |> List.map (fun (startWeekNumber, weekCount) ->
+                let rows =
+                    rowRanges.Weeks
+                    |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
+                let range = createGrigRange (rows, Range.unbounded)
+                SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder))
+
+        let dayOfWeeksBorderRequest =
+            let range = createGrigRange (Range.unbounded, columnRanges.DaysOfWeek)
+            SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
+
+        let weekTotalBorderRequest =
+            let range = createGrigRange (Range.unbounded, columnRanges.WeekTotals)
+            SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
+
         [
             outerBorderRequest
             yield! monthBorderRequests
@@ -122,7 +123,7 @@ let private getUpdateSheetRequests sheetId calendar =
             weekTotalBorderRequest
         ]
 
-    let setCellBackgroundColorRequests =
+    let setInactiveCellBackgroundColorRequests =
         let inactiveDayColor = Color(Red = 0.75f, Green = 0.75f, Blue = 0.75f)
         [|
             let weeks = Calendar.getWeeks calendar
@@ -142,7 +143,7 @@ let private getUpdateSheetRequests sheetId calendar =
         unmergeAllRequest
         yield! mergeCellRequests
         yield! setBordersRequests
-        yield! setCellBackgroundColorRequests
+        yield! setInactiveCellBackgroundColorRequests
     ]
 
 let private getUpdateValuesRequests sheetId calendar =
