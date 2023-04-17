@@ -133,8 +133,8 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
 
     let requests =
         [
-            setSheetPropertiesRequest
             yield! setDimensionLengthRequests
+            setSheetPropertiesRequest
             unmergeAllRequest
             yield! mergeCellRequests
             yield! setBordersRequests
