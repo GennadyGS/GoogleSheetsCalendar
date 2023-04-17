@@ -54,8 +54,6 @@ let private columnRanges =
 
 let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
 
-    let weeks = Calendar.getWeeks calendar
-
     let rowRanges = getRowRanges calendar
 
     let sheetProperties =
@@ -143,6 +141,7 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
     let setCellBackgroundColorRequests =
         let inactiveDayColor = Color(Red = 0.75f, Green = 0.75f, Blue = 0.75f)
         [|
+            let weeks = Calendar.getWeeks calendar
             for (weekNumber, week) in List.indexed weeks do
                 for dayOfWeekNumber in [ 0 .. DaysPerWeek - 1 ] do
                     if not week.DaysActive[dayOfWeekNumber] then
@@ -201,6 +200,7 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
             }
         let dateValues =
             [
+                let weeks = Calendar.getWeeks calendar
                 for week in weeks -> [ week.StartDate; week.EndDate ]
             ]
         Spreadsheet.updateValuesInRange spreadsheet (range, dateValues)
