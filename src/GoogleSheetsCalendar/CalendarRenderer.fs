@@ -198,8 +198,7 @@ let private getUpdateValuesRequests sheetId calendar =
                     rowRanges.Weeks
                     |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
                 createGrigRange (rows, columnRanges.DaysOfWeek)
-                |> SheetExpression.aggregate AggregationFunction.Sum
-                |> SheetFormulaValue.fromExpression
+                |> SheetFormulaValue.aggregate AggregationFunction.Sum
                 |> List.singleton
                 |> List.replicate weekCount)
         let range = createGrigRange (rowRanges.Weeks, columnRanges.MonthTotals)

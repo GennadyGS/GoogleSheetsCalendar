@@ -217,6 +217,11 @@ module SheetExpression =
 module SheetFormulaValue =
     let fromExpression (expression: string) = $"={expression}"
 
+    let aggregate aggregationFunction range =
+        range
+        |> SheetExpression.aggregate aggregationFunction
+        |> fromExpression
+
 [<RequireQualifiedAccess>]
 module SheetFormulaValues =
     let rowWiseAggregation aggregationFunction (gridRange: GridRange) =
@@ -226,8 +231,7 @@ module SheetFormulaValues =
             { gridRange with
                 Rows = Range.single rowIndex
             }
-            |> SheetExpression.aggregate aggregationFunction
-            |> SheetFormulaValue.fromExpression
+            |> SheetFormulaValue.aggregate AggregationFunction.Sum
             |> List.singleton)
 
     let columnWiseAggregation aggregationFunction (gridRange: GridRange) =
@@ -237,8 +241,7 @@ module SheetFormulaValues =
             { gridRange with
                 Columns = Range.single columnIndex
             }
-            |> SheetExpression.aggregate aggregationFunction
-            |> SheetFormulaValue.fromExpression)
+            |> SheetFormulaValue.aggregate AggregationFunction.Sum)
         |> List.singleton
 
 [<RequireQualifiedAccess>]
