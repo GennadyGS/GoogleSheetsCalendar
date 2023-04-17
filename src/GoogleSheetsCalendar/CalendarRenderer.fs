@@ -26,7 +26,7 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
     let totalRowRange = weeksRowRange |> Range.nextSingleRange
     let dataRowRange = Range.union (weeksRowRange, totalRowRange)
 
-    let headerColumnRange = Range.fromStartAndCount (0, 2)
+    let headerColumnRange = Range.withStartAndCount (0, 2)
     let daysOfWeekColumnRange =
         headerColumnRange
         |> Range.nextRangeWithCount DaysPerWeek
@@ -82,7 +82,7 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
             |> List.map (fun weekNumber ->
                 {
                     SheetId = Some sheetId
-                    Rows = weeksRowRange |> Range.singleSubrange weekNumber
+                    Rows = weeksRowRange |> Range.subrangeSingle weekNumber
                     Columns = daysOfWeekColumnRange
                 }
                 |> SheetFormula.sumofRange
@@ -224,8 +224,8 @@ let renderCalendar (sheetsService: SheetsService) (spreadsheetId, sheetId) calen
                         let range =
                             {
                                 SheetId = Some sheetId
-                                Rows = Range.singleSubrange weekNumber weeksRowRange
-                                Columns = Range.singleSubrange dayOfWeekNumber daysOfWeekColumnRange
+                                Rows = Range.subrangeSingle weekNumber weeksRowRange
+                                Columns = Range.subrangeSingle dayOfWeekNumber daysOfWeekColumnRange
                             }
                         SheetsRequests.createSetBackgroundColorRequest range inactiveDayColor
         |]

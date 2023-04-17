@@ -69,31 +69,31 @@ module Range =
             EndIndex = Some index
         }
 
-    let fromBounds (startIndex, endIndex) =
+    let withBounds (startIndex, endIndex) =
         {
             StartIndex = Some startIndex
             EndIndex = Some endIndex
         }
 
-    let single index = fromBounds (index, index)
+    let single index = withBounds (index, index)
 
-    let fromStartAndCount (startIndex, count) =
-        fromBounds (startIndex, startIndex + count - 1)
+    let withStartAndCount (startIndex, count) =
+        withBounds (startIndex, startIndex + count - 1)
 
     let nextRangeWithCount count range =
         let endIndexValue = getEndIndexValue range
-        fromBounds (endIndexValue + 1, endIndexValue + count)
+        withBounds (endIndexValue + 1, endIndexValue + count)
 
     let nextSingleRange range = nextRangeWithCount 1 range
 
     let subrangeWithBounds (startIndex, endIndex) range =
         let startIndexValue = getStartIndexValue range
-        fromBounds (startIndexValue + startIndex, startIndexValue + endIndex)
+        withBounds (startIndexValue + startIndex, startIndexValue + endIndex)
 
     let subrangeWithStartAndCount (startIndex, count) range =
         subrangeWithBounds (startIndex, startIndex + count - 1) range
 
-    let singleSubrange index range = subrangeWithBounds (index, index) range
+    let subrangeSingle index range = subrangeWithBounds (index, index) range
 
     let union (range1, range2) =
         let range1EndIndexValue = getEndIndexValue range1
