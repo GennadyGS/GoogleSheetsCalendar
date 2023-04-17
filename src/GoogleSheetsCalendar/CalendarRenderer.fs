@@ -39,7 +39,8 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
     let setSheetPropertiesRequest =
         SheetsRequests.createSetSheetPropertiesRequest sheetProperties
 
-    let clearFormattingRequest = SheetsRequests.createClearFormattingOfSheetRequest sheetId
+    let clearFormattingRequest =
+        SheetsRequests.createClearFormattingOfSheetRequest sheetId
 
     let columnCount = Range.getEndIndexValue dataColumnRange + 1
     let rowCount = Range.getEndIndexValue dataRowRange + 1
@@ -238,4 +239,3 @@ let renderCalendar (spreadsheet: Spreadsheet) sheetId calendar =
         Spreadsheet.updateValuesInRange spreadsheet (range, dayOfWeekSumFormulaValues)
 
     updateValues ()
-
