@@ -55,6 +55,13 @@ let private columnRanges =
 let private getUpdateSheetRequests sheetId calendar =
     let rowRanges = getRowRanges calendar
 
+    let createGrigRange (rows, columns) =
+        {
+            GridRange.SheetId = Some sheetId
+            Rows = rows
+            Columns = columns
+        }
+
     let sheetProperties =
         { SheetProperties.defaultValue with
             FrozenRowCount = Some(Range.getCount rowRanges.Header)
@@ -82,13 +89,10 @@ let private getUpdateSheetRequests sheetId calendar =
         calendar
         |> Calendar.getWeekNumberRanges
         |> List.map (fun (startWeekNumber, weekCount) ->
-            {
-                SheetId = Some sheetId
-                Rows =
-                    rowRanges.Weeks
-                    |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
-                Columns = columnRanges.MonthTotals
-            })
+            let rows =
+                rowRanges.Weeks
+                |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
+            createGrigRange (rows, columnRanges.MonthTotals))
         |> List.map SheetsRequests.createMergeCellsRequest
         |> List.toArray
 
@@ -101,32 +105,18 @@ let private getUpdateSheetRequests sheetId calendar =
         calendar
         |> Calendar.getWeekNumberRanges
         |> List.map (fun (startWeekNumber, weekCount) ->
-            let range =
-                {
-                    SheetId = Some sheetId
-                    Rows =
-                        rowRanges.Weeks
-                        |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
-                    Columns = Range.unbounded
-                }
+            let rows =
+                rowRanges.Weeks
+                |> Range.subrangeWithStartAndCount (startWeekNumber, weekCount)
+            let range = createGrigRange (rows, Range.unbounded)
             SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder))
 
     let dayOfWeeksBorderRequest =
-        let range =
-            {
-                SheetId = Some sheetId
-                Rows = Range.unbounded
-                Columns = columnRanges.DaysOfWeek
-            }
+        let range = createGrigRange (Range.unbounded, columnRanges.DaysOfWeek)
         SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
 
     let weekTotalBorderRequest =
-        let range =
-            {
-                SheetId = Some sheetId
-                Rows = Range.unbounded
-                Columns = columnRanges.WeekTotals
-            }
+        let range = createGrigRange (Range.unbounded, columnRanges.WeekTotals)
         SheetsRequests.createUpdateBorderRequest (range, Borders.outer solidBorder)
 
     let setBordersRequests =
@@ -144,13 +134,9 @@ let private getUpdateSheetRequests sheetId calendar =
             for (weekNumber, week) in List.indexed weeks do
                 for dayOfWeekNumber in [ 0 .. DaysPerWeek - 1 ] do
                     if not week.DaysActive[dayOfWeekNumber] then
-                        let range =
-                            {
-                                SheetId = Some sheetId
-                                Rows = Range.subrangeSingle weekNumber rowRanges.Weeks
-                                Columns =
-                                    Range.subrangeSingle dayOfWeekNumber columnRanges.DaysOfWeek
-                            }
+                        let rows = Range.subrangeSingle weekNumber rowRanges.Weeks
+                        let columns = Range.subrangeSingle dayOfWeekNumber columnRanges.DaysOfWeek
+                        let range = createGrigRange (rows, columns)
                         SheetsRequests.createSetBackgroundColorRequest range inactiveDayColor
         |]
 
@@ -166,13 +152,14 @@ let private getUpdateSheetRequests sheetId calendar =
 
 let private getUpdateValuesRequests sheetId calendar =
     let rowRanges = getRowRanges calendar
+    let createGrigRange (rows, columns) =
+        {
+            GridRange.SheetId = Some sheetId
+            Rows = rows
+            Columns = columns
+        }
     let titlesRowValueRange =
-        let range =
-            {
-                SheetId = Some sheetId
-                Rows = rowRanges.Header
-                Columns = Range.unbounded
-            }
+        let range = createGrigRange (rowRanges.Header, Range.unbounded)
         let firstDayOfWeek = Calendar.getFirstDayOfWeek calendar
         let dayOfWeekNames =
             Enum.GetValues<DayOfWeek>()
@@ -192,12 +179,7 @@ let private getUpdateValuesRequests sheetId calendar =
         (range, values)
 
     let weekDatesValueRange =
-        let range =
-            {
-                SheetId = Some sheetId
-                Rows = rowRanges.Weeks
-                Columns = columnRanges.Header
-            }
+        let range = createGrigRange (rowRanges.Weeks, columnRanges.Header)
         let values =
             [
                 let weeks = Calendar.getWeeks calendar
@@ -217,12 +199,7 @@ let private getUpdateValuesRequests sheetId calendar =
                 }
                 |> SheetFormula.sumofRange
                 |> List.singleton)
-        let range =
-            {
-                SheetId = Some sheetId
-                Rows = rowRanges.Weeks
-                Columns = columnRanges.WeekTotals
-            }
+        let range = createGrigRange (rowRanges.Weeks, columnRanges.WeekTotals)
         (range, values)
 
     let monthTotalsValueRange =
@@ -240,32 +217,18 @@ let private getUpdateValuesRequests sheetId calendar =
                 |> SheetFormula.sumofRange
                 |> List.singleton
                 |> List.replicate weekCount)
-        let range =
-            {
-                SheetId = Some sheetId
-                Rows = rowRanges.Weeks
-                Columns = columnRanges.MonthTotals
-            }
+        let range = createGrigRange (rowRanges.Weeks, columnRanges.MonthTotals)
         (range, values)
 
     let totalsRowValueRange =
         let values =
             columnRanges.Data
             |> Range.getIndexValues
-            |> List.map (fun column ->
-                {
-                    SheetId = Some sheetId
-                    Rows = rowRanges.Weeks
-                    Columns = Range.single column
-                }
+            |> List.map (fun columnIndex ->
+                createGrigRange (rowRanges.Weeks, Range.single columnIndex)
                 |> SheetFormula.sumofRange)
             |> List.singleton
-        let range =
-            {
-                SheetId = Some sheetId
-                Rows = rowRanges.Totals
-                Columns = columnRanges.Data
-            }
+        let range = createGrigRange (rowRanges.Totals, columnRanges.Data)
         (range, values)
 
     [
