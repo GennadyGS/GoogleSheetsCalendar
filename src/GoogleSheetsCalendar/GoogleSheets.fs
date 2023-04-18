@@ -50,6 +50,7 @@ type AggregationFunction =
 
 type SheetProperties =
     {
+        SheetId: int option
         FrozenRowCount: int option
         FrozenColumnCount: int option
     }
@@ -209,17 +210,17 @@ module GridRange =
 module DimensionRange =
     let create sheetId (dimension, range) =
         {
-            SheetId = sheetId
-            DimensionRange.Dimension = dimension
+            DimensionRange.SheetId = sheetId
+            Dimension = dimension
             Range = range
         }
 
-    let toApiDimensionRange dimensionRange =
+    let toApiDimensionRange (dimensionRange: DimensionRange) =
         DimensionRange(
-            SheetId = (Option.toNullable dimensionRange.SheetId),
+            SheetId = Option.toNullable dimensionRange.SheetId,
             Dimension = string dimensionRange.Dimension,
-            StartIndex = (Option.toNullable dimensionRange.Range.StartIndex),
-            EndIndex = (Option.toNullable dimensionRange.Range.EndIndex)
+            StartIndex = Option.toNullable dimensionRange.Range.StartIndex,
+            EndIndex = Option.toNullable dimensionRange.Range.EndIndex
         )
 
 [<RequireQualifiedAccess>]
@@ -229,8 +230,9 @@ module ValueRange =
 
 [<RequireQualifiedAccess>]
 module SheetProperties =
-    let defaultValue =
+    let createDefault sheetId =
         {
+            SheetProperties.SheetId = sheetId
             FrozenRowCount = None
             FrozenColumnCount = None
         }
@@ -296,6 +298,7 @@ module SheetsRequests =
         let request = new Request()
         let sheetProperties =
             SheetProperties(
+                SheetId = Option.toNullable sheetProperties.SheetId,
                 GridProperties =
                     GridProperties(
                         FrozenRowCount = Option.toNullable sheetProperties.FrozenRowCount,

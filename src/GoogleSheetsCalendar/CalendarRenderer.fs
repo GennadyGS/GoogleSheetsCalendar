@@ -71,7 +71,7 @@ let private getUpdateSheetRequests sheetId calendar =
         ]
 
     let setSheetPropertiesRequest =
-        { SheetProperties.defaultValue with
+        { SheetProperties.createDefault (Some sheetId) with
             FrozenRowCount = Some(Range.getCount rowRanges.Header)
             FrozenColumnCount = Some(Range.getCount columnRanges.Header)
         }
