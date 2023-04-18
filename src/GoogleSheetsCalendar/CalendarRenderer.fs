@@ -64,7 +64,7 @@ let private getUpdateSheetRequests sheetId calendar =
         let columnCount = Range.getEndIndexValue columnRanges.Data + 1
         let rowCount = Range.getEndIndexValue rowRanges.Data + 1
         let createSetDimensionLengthRequests (dimension, length) =
-            SheetsRequests.createSetDimensionLengthRequests (sheetId, dimension, length)
+            SheetsRequests.createSetDimensionLengthRequests (Some sheetId, dimension, length)
         [
             yield! createSetDimensionLengthRequests (Dimension.Columns, columnCount)
             yield! createSetDimensionLengthRequests (Dimension.Rows, rowCount)

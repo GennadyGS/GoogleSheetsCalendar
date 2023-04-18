@@ -29,6 +29,13 @@ type Dimension =
         | Rows -> "ROWS"
         | Columns -> "COLUMNS"
 
+type DimensionRange =
+    {
+        Dimension: Dimension
+        SheetId: int option
+        Range: Range
+    }
+
 type AggregationFunction =
     | Sum
     | Avg
@@ -199,6 +206,23 @@ module GridRange =
         $"{startReference}:{endReference}"
 
 [<RequireQualifiedAccess>]
+module DimensionRange =
+    let create sheetId (dimension, range) =
+        {
+            SheetId = sheetId
+            DimensionRange.Dimension = dimension
+            Range = range
+        }
+
+    let toApiDimensionRange dimensionRange =
+        DimensionRange(
+            SheetId = (Option.toNullable dimensionRange.SheetId),
+            Dimension = string dimensionRange.Dimension,
+            StartIndex = (Option.toNullable dimensionRange.Range.StartIndex),
+            EndIndex = (Option.toNullable dimensionRange.Range.EndIndex)
+        )
+
+[<RequireQualifiedAccess>]
 module ValueRange =
     let box (range, values) =
         (range, values |> List.map (List.map box))
@@ -291,27 +315,28 @@ module SheetsRequests =
             )
         request
 
-    let createDeleteDimensionRequest (sheetId, dimension: Dimension, range: Range) =
+    let createDeleteDimensionRequest dimensionRange =
         let result = new Request()
-        let dimensionRange =
-            DimensionRange(
-                SheetId = sheetId,
-                Dimension = string dimension,
-                StartIndex = (Option.toNullable range.StartIndex),
-                EndIndex = (Option.toNullable range.EndIndex))
-        result.DeleteDimension <- DeleteDimensionRequest(Range = dimensionRange)
+        result.DeleteDimension <-
+            DeleteDimensionRequest(Range = (DimensionRange.toApiDimensionRange dimensionRange))
         result
 
     let createAppendDimensionRequest (sheetId, dimension: Dimension, length: int) =
         let result = new Request()
         result.AppendDimension <-
-            AppendDimensionRequest(SheetId = sheetId, Dimension = string dimension, Length = length)
+            AppendDimensionRequest(
+                SheetId = (Option.toNullable sheetId),
+                Dimension = string dimension,
+                Length = length
+            )
         result
 
     let createSetDimensionLengthRequests (sheetId, dimension: Dimension, length) =
+        let deleteDimensionRange =
+            DimensionRange.create sheetId (dimension, Range.startingFrom length)
         [
             createAppendDimensionRequest (sheetId, dimension, length)
-            createDeleteDimensionRequest (sheetId, dimension, Range.startingFrom length)
+            createDeleteDimensionRequest deleteDimensionRange
         ]
 
     let createUnmergeCellsRequest range =
