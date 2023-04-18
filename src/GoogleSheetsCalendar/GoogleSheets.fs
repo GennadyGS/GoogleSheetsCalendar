@@ -237,6 +237,25 @@ module SheetProperties =
             FrozenColumnCount = None
         }
 
+    let toApiSheetProperties sheetProperties =
+        SheetProperties(
+            SheetId = Option.toNullable sheetProperties.SheetId,
+            GridProperties =
+                GridProperties(
+                    FrozenRowCount = Option.toNullable sheetProperties.FrozenRowCount,
+                    FrozenColumnCount = Option.toNullable sheetProperties.FrozenColumnCount
+                )
+        )
+
+    let getFieldNames () =
+        let defaultApiValue = Unchecked.defaultof<Google.Apis.Sheets.v4.Data.SheetProperties>
+        let gridPropertiesName = nameof(defaultApiValue.GridProperties)
+        let defaultApiGridPropertiesValue = Unchecked.defaultof<GridProperties>
+        [
+            $"{gridPropertiesName}.{nameof (defaultApiGridPropertiesValue.FrozenRowCount)}"
+            $"{gridPropertiesName}.{nameof (defaultApiGridPropertiesValue.FrozenColumnCount)}"
+        ]
+
 [<RequireQualifiedAccess>]
 module SheetExpression =
     let rangeReference range =
@@ -296,26 +315,11 @@ module SheetsRequests =
 
     let createSetSheetPropertiesRequest (sheetProperties: SheetProperties) =
         let request = new Request()
-        let sheetProperties =
-            SheetProperties(
-                SheetId = Option.toNullable sheetProperties.SheetId,
-                GridProperties =
-                    GridProperties(
-                        FrozenRowCount = Option.toNullable sheetProperties.FrozenRowCount,
-                        FrozenColumnCount = Option.toNullable sheetProperties.FrozenColumnCount
-                    )
-            )
-
+        let apiSheetProperties = SheetProperties.toApiSheetProperties sheetProperties
         request.UpdateSheetProperties <-
             UpdateSheetPropertiesRequest(
-                Properties = sheetProperties,
-                Fields =
-                    ([
-                        $"{nameof (sheetProperties.GridProperties)}.{nameof (sheetProperties.GridProperties.FrozenRowCount)}"
-                        $"{nameof (sheetProperties.GridProperties)}.{nameof (sheetProperties.GridProperties.FrozenColumnCount)}"
-                     ]
-                     |> String.concat ",")
-            )
+                Properties = apiSheetProperties,
+                Fields = (SheetProperties.getFieldNames () |> String.concat ","))
         request
 
     let createDeleteDimensionRequest dimensionRange =
