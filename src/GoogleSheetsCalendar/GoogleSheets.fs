@@ -21,6 +21,14 @@ type GridRange =
         SheetId: int option
     }
 
+type Dimension =
+    | Rows
+    | Columns
+    override this.ToString() =
+        match this with
+        | Rows -> "ROWS"
+        | Columns -> "COLUMNS"
+
 type AggregationFunction =
     | Sum
     | Avg
@@ -283,23 +291,27 @@ module SheetsRequests =
             )
         request
 
-    let createDeleteDimensionRequest dimensionRange =
+    let createDeleteDimensionRequest (sheetId, dimension: Dimension, range: Range) =
         let result = new Request()
+        let dimensionRange =
+            DimensionRange(
+                SheetId = sheetId,
+                Dimension = string dimension,
+                StartIndex = (Option.toNullable range.StartIndex),
+                EndIndex = (Option.toNullable range.EndIndex))
         result.DeleteDimension <- DeleteDimensionRequest(Range = dimensionRange)
         result
 
-    let createAppendDimensionRequest (sheetId: int, dimension, length: int) =
+    let createAppendDimensionRequest (sheetId, dimension: Dimension, length: int) =
         let result = new Request()
         result.AppendDimension <-
-            AppendDimensionRequest(SheetId = sheetId, Dimension = dimension, Length = length)
+            AppendDimensionRequest(SheetId = sheetId, Dimension = string dimension, Length = length)
         result
 
-    let createSetDimensionLengthRequests (sheetId, dimension, length) =
+    let createSetDimensionLengthRequests (sheetId, dimension: Dimension, length) =
         [
             createAppendDimensionRequest (sheetId, dimension, length)
-            let deleteDimensionRange =
-                DimensionRange(SheetId = sheetId, Dimension = dimension, StartIndex = length)
-            createDeleteDimensionRequest deleteDimensionRange
+            createDeleteDimensionRequest (sheetId, dimension, Range.startingFrom length)
         ]
 
     let createUnmergeCellsRequest range =
@@ -379,7 +391,7 @@ module SheetsService =
                 DataFilterValueRange(
                     DataFilter = DataFilter(GridRange = (range |> GridRange.toApiGridRange)),
                     Values = convertValues values,
-                    MajorDimension = "ROWS"
+                    MajorDimension = (string Dimension.Rows)
                 ))
             |> List.toArray
 
