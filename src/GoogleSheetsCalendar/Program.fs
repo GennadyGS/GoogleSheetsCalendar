@@ -1,4 +1,4 @@
-﻿open System
+open System
 open System.IO
 open System.Reflection
 open Microsoft.Extensions.Configuration
@@ -40,12 +40,18 @@ let createConfiguration rootDirectoryPath =
     nativeConfiguration.Get<Configuration>()
     |> NullCoalesce.coalesce (lazy raise (InvalidOperationException("Configuration is missing")))
 
+printfn "Loading configuration..."
 let configuration = createConfiguration (getRootDirectoryPath ())
 
+printfn "Connecting to Google Sheets..."
 let speadsheet =
     let credentialFileName = Path.Combine(getRootDirectoryPath (), CredentialFileName)
     Spreadsheet.createFromCredentialFileName credentialFileName configuration.SpreadsheetId
 
-configuration.Year
-|> Calendar.calculate configuration.FirstDayOfWeek
-|> CalendarRenderer.renderCalendar speadsheet configuration.SheetId
+printfn $"Calculating calendar for year {configuration.Year}..."
+let calendar = Calendar.calculate configuration.FirstDayOfWeek configuration.Year
+
+printfn "Updating spreadsheet..."
+CalendarRenderer.renderCalendar speadsheet configuration.SheetId calendar
+
+printfn "Done."
