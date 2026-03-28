@@ -388,9 +388,11 @@ module SheetsService =
         if not (File.Exists(credentialFileName)) then
             raise (InvalidOperationException($"File {credentialFileName} is missing"))
 
+        use stream = new FileStream(credentialFileName, FileMode.Open, FileAccess.Read)
         let credential =
-            GoogleCredential
-                .FromFile(credentialFileName)
+            CredentialFactory
+                .FromStream<ServiceAccountCredential>(stream)
+                .ToGoogleCredential()
                 .CreateScoped([| SheetsService.Scope.Spreadsheets |])
 
         let initializer =
